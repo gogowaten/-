@@ -23,10 +23,27 @@ namespace Gourenga
 {
     public partial class MainWindow : Window
     {
-        private ObservableCollection<ImageThumb> MyThumbs = new();
-        private ImageThumb MyActiveThumb;
+        //private ObservableCollection<ImageThumb> MyThumbs = new();
+        private ObservableCollection<ImageThumb> MyThumbs;
+        private ImageThumb MyActiveThumb
+        {
+            get => myActiveThumb; set
+            {
+                var neko = MyThumbs.IndexOf(MyActiveThumb);
+                var inu = MyThumbs.IndexOf(myActiveThumb);
+                var uma = MyThumbs.IndexOf(value);
+                if (myActiveThumb != null)
+                {
+                    MyActiveThumb.MyStrokeRectangle.Visibility = Visibility.Collapsed;
+
+                }
+                myActiveThumb = value;
+                value.MyStrokeRectangle.Visibility = Visibility.Visible;
+            }
+        }
         private List<Point> MyLocate = new();
         private Data MyData;
+        private ImageThumb myActiveThumb;
 
         public MainWindow()
         {
@@ -40,20 +57,10 @@ namespace Gourenga
             this.Top = 0;
             MyData = new();
             this.DataContext = MyData;
-            //SetBinding();
+            MyThumbs = MyData.MyThumbs;
 
         }
 
-        //private void SetBinding()
-        //{
-        //    MultiBinding mb = new();
-        //    mb.Converter = new MyConverterCanvasHeight();
-        //    mb.ConverterParameter = MyThumbs;
-
-        //    mb.Bindings.Add(new Binding(nameof(MyData.Row)));
-        //    mb.Bindings.Add(new Binding(nameof(MyData.Col)));
-        //    mb.Bindings.Add(new Binding(nameof(MyData.Size)));
-        //}
 
 
 
@@ -122,6 +129,7 @@ namespace Gourenga
             int y = (int)((double)i / MyData.Col) * MyData.Size;
             MyLocate.Add(new Point(x, y));
             ImageThumb thumb = new(img);// new(img, 0, 0, x, y);
+            
             Canvas.SetLeft(thumb, x);
             Canvas.SetTop(thumb, y);
             SetThumbSizeBinding(thumb);
@@ -138,7 +146,7 @@ namespace Gourenga
             thumb.DragStarted += (s, e) =>
             {
                 thumb.Opacity = 0.5;
-                MyActiveThumb.MyVisibleStroke = Visibility.Collapsed;
+                MyActiveThumb.MyStrokeRectangle.Visibility = Visibility.Collapsed;
 
                 //最上面表示、インデックス取得
                 Panel.SetZIndex(thumb, MyThumbs.Count);
@@ -157,10 +165,11 @@ namespace Gourenga
                 Panel.SetZIndex(thumb, index);
                 Canvas.SetLeft(thumb, MyLocate[index].X);
                 Canvas.SetTop(thumb, MyLocate[index].Y);
-                SetLocate(index);
+                //SetLocate(index);
                 MyActiveThumb = thumb;
 
             };
+            SetMyCanvasSize();
         }
 
         private void SetThumbSizeBinding(ImageThumb t)
@@ -170,12 +179,13 @@ namespace Gourenga
             b.Path = new PropertyPath(ControlLibraryCore20200620.NumericUpDown.MyValueProperty);
             t.MyImage.SetBinding(WidthProperty, b);
             t.MyImage.SetBinding(HeightProperty, b);
-            
+
         }
 
         //座標リスト更新
         private void ChangeLocate()
         {
+            if (MyThumbs == null) return;
             for (int i = 0; i < MyThumbs.Count; i++)
             {
                 int x = i % MyData.Col * MyData.Size;
@@ -183,6 +193,7 @@ namespace Gourenga
                 MyLocate[i] = new Point(x, y);
             }
             SetLocate();
+            SetMyCanvasSize();
         }
 
         /// <summary>
@@ -192,7 +203,7 @@ namespace Gourenga
         private void SetLocate(int avoidIndex = -1)
         {
             for (int i = 0; i < avoidIndex; i++)
-            {                
+            {
                 Canvas.SetLeft(MyThumbs[i], MyLocate[i].X);
                 Canvas.SetTop(MyThumbs[i], MyLocate[i].Y);
             }
@@ -203,7 +214,22 @@ namespace Gourenga
             }
         }
 
-        
+        private void SetMyCanvasSize()
+        {
+            if (MyThumbs.Count == 0) return;
+            int c = MyData.Col;
+            int r = MyData.Row;
+            int size = MyData.Size;
+            int w = c * size;
+            int h = r * size;
+            int hh = (int)Math.Ceiling((double)MyThumbs.Count / c) * size;
+            if (hh > h) h = hh;
+
+            MyCanvas.Width = w;
+            MyCanvas.Height = h;
+
+        }
+
 
         #region ドラッグ移動系
 
@@ -271,6 +297,10 @@ namespace Gourenga
         private void MyButtonTest_Click(object sender, RoutedEventArgs e)
         {
             var data = MyData;
+            var size = MyData.Size;
+            var row = MyData.Row;
+            MyThumbs[0].MyStrokeRectangle.Visibility = Visibility.Visible;
+
         }
 
         private void MyButtonSave_Click(object sender, RoutedEventArgs e)
@@ -296,6 +326,7 @@ namespace Gourenga
         private void MyUpDownSize_MyValueChanged(object sender, ControlLibraryCore20200620.MyValuechangedEventArgs e)
         {
             ChangeLocate();
+            MyStatusItem1.Content = MyUpDownSize.MyValue.ToString();
         }
 
 
@@ -316,59 +347,11 @@ namespace Gourenga
         public int Col { get; set; } = 3;
         public int Size { get; set; } = 40;
 
-        private double _CanvasWidth;
-        public double CanvasWidth
-        {
-            get => _CanvasWidth;
-            set
-            {
-                if (_CanvasWidth == value)
-                    return;
-                _CanvasWidth = value;
-                RaisePropertyChanged();
-            }
-        }
-
-
-        private double _CanvasHeight;
-        public double CanvasHeight
-        {
-            get => _CanvasHeight;
-            set
-            {
-                if (_CanvasHeight == value)
-                    return;
-                _CanvasHeight = value;
-                RaisePropertyChanged();
-            }
-        }
-
-
+    
 
         public ObservableCollection<ImageThumb> MyThumbs { get; set; } = new();
 
-        public Data()
-        {
-            MyThumbs.CollectionChanged += Thumbs_CollectionChanged;
-        }
 
-
-        private void Thumbs_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
-        {
-            if (MyThumbs.Count == 0)
-            {
-                CanvasWidth = 0;
-                CanvasHeight = 0;
-                return;
-            }
-
-            int h = Row * Size;
-            int hh = (int)Math.Ceiling((double)MyThumbs.Count / Col) * Size;
-            if (hh > h) h = hh;
-
-            CanvasWidth = Col * Size;
-            CanvasHeight = h;
-        }
     }
 
 
@@ -389,6 +372,6 @@ namespace Gourenga
             throw new NotImplementedException();
         }
     }
-  
+
 
 }
