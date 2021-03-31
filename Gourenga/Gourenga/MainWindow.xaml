@@ -3,10 +3,73 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:nup="clr-namespace:ControlLibraryCore20200620;assembly=ControlLibraryCore20200620"
         xmlns:local="clr-namespace:Gourenga"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
+        Title="MainWindow" Height="450" Width="600"
+        ResizeMode="CanResizeWithGrip"
+        AllowDrop="True"
+        Drop="Window_Drop">
+  <Window.DataContext>
+    <local:Data/>
+  </Window.DataContext>
+  <Grid UseLayoutRounding="True">
+    <DockPanel>
+      <StatusBar DockPanel.Dock="Bottom">
+        <StatusBarItem x:Name="MyStatusItem1" Content="item1"/>
+      </StatusBar>
+      <Menu DockPanel.Dock="Top">
+        <nup:NumericUpDown Name="MyUpDownCol" MyValueChanged="MyUpDownCol_MyValueChanged"
+                           MyMinValue="1" MyMaxValue="10" MyStringFormat="列数 00"
+                           MyValue="{Binding Path=Col}"/>
+        <nup:NumericUpDown Name="MyUpDownRow" MyValueChanged="MyUpDownRow_MyValueChanged"
+                           MyMinValue="1" MyMaxValue="10" MyStringFormat="行数 00"
+                           MyValue="{Binding Path=Row}"/>
+        <nup:NumericUpDown Name="MyUpDownSize" MyValueChanged="MyUpDownSize_MyValueChanged"
+                           MyMinValue="40" MyMaxValue="120" MyStringFormat="1サイズ 00"
+                           MySmallChange="40" MyLargeChange="40"
+                           MyValue="{Binding Path=Size}"/>
+        <Button x:Name="MyButtonTest" Content="test" Click="MyButtonTest_Click"/>
+        <Button x:Name="MyButtonSave" Content="保存" Click="MyButtonSave_Click"/>
+        <Button x:Name="MyButtonRemove" Content="削除" Click="MyButtonRemove_Click"/>
 
-    </Grid>
+      </Menu>
+
+      <ScrollViewer HorizontalScrollBarVisibility="Auto">
+        <Canvas x:Name="MyCanvas" HorizontalAlignment="Left" VerticalAlignment="Top"
+              Width="{Binding Path=CanvasWidth}"
+              Height="{Binding Path=CanvasHeight}">
+          <Rectangle x:Name="MyRectangle" Stroke="Red" StrokeThickness="2">
+            <Rectangle.Resources>
+              <local:MyConverterRectangleSize x:Key="Size"/>
+            </Rectangle.Resources>
+            <Rectangle.Width>
+              <MultiBinding Converter="{StaticResource Size}">
+                <Binding ElementName="MyUpDownCol" Path="MyValue"/>
+                <Binding ElementName="MyUpDownSize" Path="MyValue"/>
+              </MultiBinding>
+            </Rectangle.Width>
+            <Rectangle.Height>
+              <MultiBinding Converter="{StaticResource Size}">
+                <Binding ElementName="MyUpDownRow" Path="MyValue"/>
+                <Binding ElementName="MyUpDownSize" Path="MyValue"/>
+              </MultiBinding>
+            </Rectangle.Height>
+            <!--<Rectangle.Width>
+            <MultiBinding Converter="{StaticResource Size}">
+              <Binding Path="Col"/>
+              <Binding Path="Size"/>
+            </MultiBinding>
+          </Rectangle.Width>
+          <Rectangle.Height>
+            <MultiBinding Converter="{StaticResource Size}">
+              <Binding Path="Row"/>
+              <Binding Path="Size"/>
+            </MultiBinding>
+          </Rectangle.Height>-->
+          </Rectangle>
+        </Canvas>
+      </ScrollViewer>
+    </DockPanel>
+  </Grid>
 </Window>

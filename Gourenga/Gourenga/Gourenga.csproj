@@ -6,4 +6,10 @@
     <UseWPF>true</UseWPF>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Reference Include="ControlLibraryCore20200620">
+      <HintPath>..\..\..\userControl\ControlLibraryCore20200620\ControlLibraryCore20200620\bin\x64\Release\netcoreapp3.1\ControlLibraryCore20200620.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
 </Project>
