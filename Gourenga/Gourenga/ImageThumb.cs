@@ -41,7 +41,7 @@ namespace Gourenga
 
             //waku
             MyStrokeRectangle.Visibility = Visibility.Collapsed;
-            MyStrokeRectangle.Stroke = Brushes.Black;
+            MyStrokeRectangle.Stroke = Brushes.Cyan;
             MyStrokeRectangle.StrokeThickness = 1.0;
             MyPanel.Children.Add(MyStrokeRectangle);
             _ = MyStrokeRectangle.SetBinding(WidthProperty, MakeBinding(img, WidthProperty, BindingMode.OneWay));

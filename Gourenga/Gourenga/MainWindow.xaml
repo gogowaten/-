@@ -26,7 +26,7 @@
                            MyMinValue="1" MyMaxValue="10" MyStringFormat="行数 00"
                            MyValue="{Binding Path=Row}"/>
         <nup:NumericUpDown Name="MyUpDownSize" MyValueChanged="MyUpDownSize_MyValueChanged"
-                           MyMinValue="40" MyMaxValue="120" MyStringFormat="1サイズ 000"
+                           MyMinValue="40" MyMaxValue="240" MyStringFormat="1サイズ 000"
                            MySmallChange="40" MyLargeChange="40"
                            MyValue="{Binding Path=Size}"/>
         <Button x:Name="MyButtonTest" Content="test" Click="MyButtonTest_Click"/>
@@ -39,7 +39,7 @@
         <Canvas x:Name="MyCanvas" HorizontalAlignment="Left" VerticalAlignment="Top">
           <!--Width="{Binding Path=MyThumbs.CanvasWidth}"
               Height="{Binding Path=CanvasHeight}">-->
-          <Rectangle x:Name="MyRectangle" Stroke="Red" StrokeThickness="2">
+          <Rectangle x:Name="MyRectangle" Stroke="MediumOrchid" StrokeThickness="2">
             <Rectangle.Resources>
               <local:MyConverterRectangleSize x:Key="Size"/>
             </Rectangle.Resources>

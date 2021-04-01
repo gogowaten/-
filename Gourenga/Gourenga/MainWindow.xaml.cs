@@ -23,27 +23,37 @@ namespace Gourenga
 {
     public partial class MainWindow : Window
     {
-        //private ObservableCollection<ImageThumb> MyThumbs = new();
+        //アプリ情報
+        private const string APP_NAME = "絶対画連合連画";
+        private string AppVersion;
+
         private ObservableCollection<ImageThumb> MyThumbs;
         private ImageThumb MyActiveThumb
         {
             get => myActiveThumb; set
             {
-                var neko = MyThumbs.IndexOf(MyActiveThumb);
-                var inu = MyThumbs.IndexOf(myActiveThumb);
-                var uma = MyThumbs.IndexOf(value);
+                //古い方は枠表表示なし
                 if (myActiveThumb != null)
                 {
                     MyActiveThumb.MyStrokeRectangle.Visibility = Visibility.Collapsed;
-
                 }
+
                 myActiveThumb = value;
-                value.MyStrokeRectangle.Visibility = Visibility.Visible;
+
+                //新しいものには枠表示する
+                if (value != null)
+                {
+                    value.MyStrokeRectangle.Visibility = Visibility.Visible;
+                }
             }
         }
         private List<Point> MyLocate = new();
         private Data MyData;
         private ImageThumb myActiveThumb;
+
+        private string LastDirectory;
+        private string LastFileName;
+        private int LastFileExtensionIndex;
 
         public MainWindow()
         {
@@ -53,12 +63,18 @@ namespace Gourenga
         }
         private void MyInitialize()
         {
+            BitmapEncoder encoder = new JpegBitmapEncoder();
+
             this.Left = 0;
             this.Top = 0;
             MyData = new();
             this.DataContext = MyData;
             MyThumbs = MyData.MyThumbs;
 
+            //アプリ情報
+            string[] coms = Environment.GetCommandLineArgs();
+            AppVersion = System.Diagnostics.FileVersionInfo.GetVersionInfo(coms[0]).FileVersion;
+            this.Title = APP_NAME + AppVersion;
         }
 
 
@@ -114,6 +130,11 @@ namespace Gourenga
             {
                 MyActiveThumb = MyThumbs[MyThumbs.Count - 1];
             }
+
+            //最初のファイルのフォルダパス、ファイル名、拡張子を記録
+            LastDirectory = System.IO.Path.GetDirectoryName(paths[0]);
+            LastFileName = System.IO.Path.GetFileNameWithoutExtension(paths[0]);
+            SetLastExtentionIndex(paths[0]);
         }
 
         private void AddImage(BitmapSource source)
@@ -129,7 +150,7 @@ namespace Gourenga
             int y = (int)((double)i / MyData.Col) * MyData.Size;
             MyLocate.Add(new Point(x, y));
             ImageThumb thumb = new(img);// new(img, 0, 0, x, y);
-            
+
             Canvas.SetLeft(thumb, x);
             Canvas.SetTop(thumb, y);
             SetThumbSizeBinding(thumb);
@@ -142,20 +163,18 @@ namespace Gourenga
 
             //マウスドラッグ移動
             //開始時
-
             thumb.DragStarted += (s, e) =>
             {
-                thumb.Opacity = 0.5;
-                MyActiveThumb.MyStrokeRectangle.Visibility = Visibility.Collapsed;
-
                 //最上面表示、インデックス取得
                 Panel.SetZIndex(thumb, MyThumbs.Count);
 
+                thumb.Opacity = 0.5;                
                 MyActiveThumb = thumb;
-
             };
+
             //移動中
             thumb.DragDelta += Thumb_DragDelta;
+
             //終了後
             thumb.DragCompleted += (s, e) =>
             {
@@ -165,10 +184,8 @@ namespace Gourenga
                 Panel.SetZIndex(thumb, index);
                 Canvas.SetLeft(thumb, MyLocate[index].X);
                 Canvas.SetTop(thumb, MyLocate[index].Y);
-                //SetLocate(index);
-                MyActiveThumb = thumb;
-
             };
+
             SetMyCanvasSize();
         }
 
@@ -294,6 +311,349 @@ namespace Gourenga
 
 
 
+        #region 保存
+        //private void SaveFile()
+        //{
+        //    //描画する座標とサイズを取得
+        //    List<Rect> drawRects = MakeRects();
+
+        //    DrawingVisual dv = new();
+        //    using (var dc = dv.RenderOpen())
+        //    {
+        //        for (int i = 0; i < drawRects.Count; i++)
+        //        {
+        //            BitmapSource source = MyThumbs[i].MyImage.Source as BitmapSource;
+        //            dc.DrawImage(source, drawRects[i]);
+        //        }
+        //    }
+        //    //最終的な全体画像サイズ計算、RectのUnionを使う
+        //    Rect dRect = new();
+        //    for (int i = 0; i < drawRects.Count; i++)
+        //    {
+        //        dRect = Rect.Union(dRect, drawRects[i]);
+        //    }
+        //    int width = (int)dRect.Width;
+        //    int height = (int)dRect.Height;
+        //    RenderTargetBitmap render = new(width, height, 96, 96, PixelFormats.Pbgra32);
+        //    render.Render(dv);
+        //    SaveBitmapToPngFile(render, MakeSavePath());
+        //}
+
+        //描画サイズと座標の計算
+        //E:\オレ\エクセル\作りたいアプリのメモ.xlsm_2021031_$A$214
+        private List<Rect> MakeRects()
+        {
+            List<Rect> drawRects = new();
+            //横に並べる個数
+            int MasuYoko = MyData.Col;
+
+            int saveImageCount = MyData.Row * MyData.Col;
+            if (saveImageCount > MyThumbs.Count) saveImageCount = MyThumbs.Count;
+
+            //サイズとX座標
+            //指定横幅に縮小、アスペクト比は保持
+            for (int i = 0; i < saveImageCount; i++)
+            {
+                //サイズ
+                BitmapSource bmp = MyThumbs[i].MyImage.Source as BitmapSource;
+                double width = bmp.PixelWidth;
+                double ratio = MyData.Size / width;
+                if (ratio > 1) ratio = 1;
+                width *= ratio;
+
+                //X座標、中央揃え
+                double x = (i % MasuYoko) * MyData.Size;
+                x = x + (MyData.Size - width) / 2;
+
+                //Y座標は後で計算
+                drawRects.Add(new(x, 0, width, bmp.PixelHeight * ratio));
+            }
+
+            //Y座標計算
+            //Y座標はその行にある画像の中で最大の高さを求めて、中央揃えのY座標を計算
+            //行ごとに計算する必要がある
+
+            //今の行の基準Y座標、次の行へは今の行の高さを加算していく
+            double kijun = 0;
+            int count = 0;
+            while (count < saveImageCount)
+            {
+                int end = count + MasuYoko;
+                if (end > saveImageCount) end = saveImageCount;
+                //Y座標計算
+                kijun += SubFunc(count, end, kijun);
+                //横に並べる個数が3なら0 3 6…
+                count += MasuYoko;
+            }
+
+            //Y座標計算
+            //開始と終了Index指定、基準値
+            double SubFunc(int begin, int end, double kijun)
+            {
+                //行の高さを求める(最大の画像が収まる)
+                double max = 0;
+                for (int i = begin; i < end; i++)
+                {
+                    if (drawRects[i].Height > max) max = drawRects[i].Height;
+                }
+                //Y座標 = 基準値 + (行の高さ - 画像の高さ) / 2
+                for (int i = begin; i < end; i++)
+                {
+                    Rect temp = drawRects[i];
+                    temp.Y = kijun + (max - drawRects[i].Height) / 2;
+                    drawRects[i] = temp;
+                }
+                return max;
+            }
+            return drawRects;
+        }
+
+
+        //日時をstringで取得
+        private string MakeDateString()
+        {
+            DateTime time = DateTime.Now;
+            string str = time.ToString("yyyyMMdd_HHmmssfff");
+            return str;
+        }
+
+        //日時のファイル名作成＋PNG拡張子
+        private string MakeSavePath()
+        {
+            DateTime time = DateTime.Now;
+            string ts = time.ToString("yyyyMMdd_HHmmssfff");
+            string path = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            path = System.IO.Path.Combine(path, ts);
+            path += ".png";
+            return path;
+        }
+
+        //private void SaveBitmapToPngFile(BitmapSource source, string path)
+        //{
+        //    PngBitmapEncoder encoder = new();
+        //    encoder.Frames.Add(BitmapFrame.Create(source));
+        //    using (var fs = new System.IO.FileStream(
+        //        path, System.IO.FileMode.CreateNew, System.IO.FileAccess.Write))
+        //    {
+        //        encoder.Save(fs);
+        //    }
+        //}
+
+        //画像保存
+        private BitmapSource MakeSaveBitmap()
+        {
+            //描画する座標とサイズを取得
+            List<Rect> drawRects = MakeRects();
+
+            DrawingVisual dv = new();
+            using (var dc = dv.RenderOpen())
+            {
+                for (int i = 0; i < drawRects.Count; i++)
+                {
+                    BitmapSource source = MyThumbs[i].MyImage.Source as BitmapSource;
+                    dc.DrawImage(source, drawRects[i]);
+                }
+            }
+            //最終的な全体画像サイズ計算、RectのUnionを使う
+            Rect dRect = new();
+            for (int i = 0; i < drawRects.Count; i++)
+            {
+                dRect = Rect.Union(dRect, drawRects[i]);
+            }
+            int width = (int)dRect.Width;
+            int height = (int)dRect.Height;
+            RenderTargetBitmap render = new(width, height, 96, 96, PixelFormats.Pbgra32);
+            render.Render(dv);
+            return render;
+        }
+
+        private void SaveImage()
+        {
+            var saveFileDialog = new Microsoft.Win32.SaveFileDialog();
+            saveFileDialog.Filter = "*.png|*.png|*.jpg|*.jpg|*.bmp|*.bmp|*.gif|*.gif|*.tiff|*.tiff|*.wdp|*.wdp;*jxr";
+            saveFileDialog.AddExtension = true;//ファイル名に拡張子追加
+
+            //初期フォルダ指定、開いている画像と同じフォルダ
+            saveFileDialog.InitialDirectory = LastDirectory;
+            saveFileDialog.FileName = LastFileName + "_";
+            //saveFileDialog.FileName = MakeDateString();
+
+            saveFileDialog.FilterIndex = LastFileExtensionIndex;
+
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                BitmapEncoder encoder = null;
+                switch (saveFileDialog.FilterIndex)
+                {
+                    case 1:
+                        encoder = new PngBitmapEncoder();
+                        break;
+                    case 2:
+                        encoder = new JpegBitmapEncoder();
+                        break;
+                    case 3:
+                        encoder = new BmpBitmapEncoder();
+                        break;
+                    case 4:
+                        encoder = new GifBitmapEncoder();
+                        break;
+                    case 5:
+                        encoder = new TiffBitmapEncoder();
+                        break;
+                    case 6:
+                        //wmpはロスレス指定、じゃないと1bppで保存時に画像が崩れるしファイルサイズも大きくなる
+                        var wmp = new WmpBitmapEncoder();
+                        wmp.ImageQualityLevel = 1.0f;
+                        encoder = wmp;
+                        break;
+                    default:
+                        break;
+                }
+
+                encoder.Frames.Add(BitmapFrame.Create(MakeSaveBitmap(), null, MakeMetadata(encoder), null));
+                using (var fs = new System.IO.FileStream(
+                    saveFileDialog.FileName,
+                    System.IO.FileMode.Create,
+                    System.IO.FileAccess.Write))
+                {
+                    //保存
+                    encoder.Save(fs);
+                    //保存フォルダのパスと拡張子を記録
+                    LastDirectory = System.IO.Path.GetDirectoryName(saveFileDialog.FileName);
+                    LastFileExtensionIndex = saveFileDialog.FilterIndex;
+                }
+
+            }
+        }
+
+
+        //メタデータ作成
+        private BitmapMetadata MakeMetadata(BitmapEncoder encoder)
+        {
+            BitmapMetadata data = null;
+            string software = APP_NAME + "_" + AppVersion;
+            switch (encoder.CodecInfo.FriendlyName)
+            {
+                case "BMP Encoder":
+                    break;
+                case "PNG Encoder":
+                    data = new BitmapMetadata("png");
+                    data.SetQuery("/tEXt/Software", software);
+                    break;
+                case "JPEG Encoder":
+                    data = new BitmapMetadata("jpg");
+                    data.SetQuery("/app1/ifd/{ushort=305}", software);
+                    break;
+                case "GIF Encoder":
+                    data = new BitmapMetadata("Gif");
+                    data.SetQuery("/XMP/XMP:CreatorTool", software);
+                    break;
+                case "TIFF Encoder":
+                    data = new BitmapMetadata("tiff")
+                    {
+                        ApplicationName = software
+                    };
+                    break;
+                case "WMPhoto Encoder":
+
+                    break;
+                default:
+                    break;
+            }
+
+            return data;
+        }
+
+        //ファイルパスから拡張子取得して決められたIndexを記録
+        private void SetLastExtentionIndex(string path)
+        {
+            string ext = System.IO.Path.GetExtension(path);
+            switch (ext)
+            {
+                case ".png":
+                case ".PNG":
+                case ".Png":
+                    LastFileExtensionIndex = 1;
+                    break;
+                case ".bmp":
+                case ".Bmp":
+                case ".BMP":
+                    LastFileExtensionIndex = 3;
+                    break;
+                case ".jpg":
+                case ".Jpg":
+                case ".JPG":
+                case ".jpeg":
+                case ".JPEG":
+                    LastFileExtensionIndex = 2;
+                    break;
+                case ".gif":
+                case ".Gif":
+                case ".GIF":
+                    LastFileExtensionIndex = 4;
+                    break;
+                case ".tif":
+                case ".Tif":
+                case ".TIF":
+                case ".tiff":
+                case ".Tiff":
+                case ".TIFF":
+                    LastFileExtensionIndex = 5;
+                    break;
+                case ".hdp":
+                case ".Hdp":
+                case ".HDP":
+                case ".wdp":
+                case ".Wdp":
+                case ".WDP":
+                case ".jxr":
+                case ".Jxr":
+                case ".JXR":
+                    LastFileExtensionIndex = 6;
+                    break;
+                default:
+                    LastFileExtensionIndex = 1;
+                    break;
+            }
+        }
+
+        #endregion 保存
+
+
+
+        //削除時
+        private void RemoveThumb(ImageThumb t)
+        {
+            if (MyThumbs.Count == 0) return;
+
+            int i = MyThumbs.IndexOf(t);
+
+            //MyActiveThumb = MyThumbs[i];
+            MyThumbs.Remove(t);
+            MyCanvas.Children.Remove(t);
+            MyLocate.RemoveAt(MyLocate.Count - 1);
+            SetLocate();//再配置
+            SetMyCanvasSize();
+
+            //ActiveThumbの調整
+            if (MyThumbs.Count == 0)
+            {
+                MyActiveThumb = null;
+            }
+            else if (i >= MyThumbs.Count)
+            {
+                MyActiveThumb = MyThumbs[i - 1];
+            }
+            else
+            {
+                MyActiveThumb = MyThumbs[i];
+            }
+        }
+
+
+
+
+
         private void MyButtonTest_Click(object sender, RoutedEventArgs e)
         {
             var data = MyData;
@@ -305,12 +665,14 @@ namespace Gourenga
 
         private void MyButtonSave_Click(object sender, RoutedEventArgs e)
         {
-
+            if (MyThumbs.Count <= 0) return;
+            //SaveFile();
+            SaveImage();
         }
 
         private void MyButtonRemove_Click(object sender, RoutedEventArgs e)
         {
-
+            RemoveThumb(MyActiveThumb);
         }
 
         private void MyUpDownCol_MyValueChanged(object sender, ControlLibraryCore20200620.MyValuechangedEventArgs e)
@@ -347,7 +709,7 @@ namespace Gourenga
         public int Col { get; set; } = 3;
         public int Size { get; set; } = 40;
 
-    
+
 
         public ObservableCollection<ImageThumb> MyThumbs { get; set; } = new();
 
