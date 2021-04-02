@@ -4,6 +4,9 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net5.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
+    <Authors>gogowaten午後わてん</Authors>
+    <Description>画像連結</Description>
+    <Copyright>gogowaten午後わてん</Copyright>
   </PropertyGroup>
 
   <ItemGroup>

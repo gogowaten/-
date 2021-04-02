@@ -1,0 +1,3 @@
+C:\Users\waten\Source\Repos\gourenga\Gourenga\Gourenga\bin\Release\net5.0-windows\publish\Gourenga.pdb
+C:\Users\waten\Source\Repos\gourenga\Gourenga\Gourenga\bin\Release\net5.0-windows\publish\ControlLibraryCore20200620.pdb
+C:\Users\waten\Source\Repos\gourenga\Gourenga\Gourenga\bin\Release\net5.0-windows\publish\Gourenga.exe

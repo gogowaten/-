@@ -23,14 +23,17 @@ namespace Gourenga
 {
     public partial class MainWindow : Window
     {
-        //アプリ情報
+        //アプリ情報表示用、名前、バージョン
         private const string APP_NAME = "絶対画連合連画";
         private string AppVersion;
 
         private ObservableCollection<ImageThumb> MyThumbs;
+
+        private ImageThumb myActiveThumb;
         private ImageThumb MyActiveThumb
         {
-            get => myActiveThumb; set
+            get => myActiveThumb;
+            set
             {
                 //古い方は枠表表示なし
                 if (myActiveThumb != null)
@@ -47,13 +50,14 @@ namespace Gourenga
                 }
             }
         }
-        private List<Point> MyLocate = new();
-        private Data MyData;
-        private ImageThumb myActiveThumb;
+        
 
-        private string LastDirectory;
-        private string LastFileName;
-        private int LastFileExtensionIndex;
+        private List<Point> MyLocate = new();//座標リスト
+        private Data MyData;//DataContextに指定する
+        private string LastDirectory;//ドロップしたファイルのフォルダパス
+        private string LastFileName;//ドロップしたファイル名
+        private int LastFileExtensionIndex;//ドロップしたファイルの拡張子判別用インデックス
+
 
         public MainWindow()
         {
@@ -66,6 +70,7 @@ namespace Gourenga
 #if DEBUG
             this.Left = 0;
             this.Top = 0;
+            MyButtonTest.Visibility = Visibility.Visible;
 #endif
 
             MyData = new();
@@ -142,6 +147,60 @@ namespace Gourenga
             SetLastExtentionIndex(paths[0]);
         }
 
+        //ファイルドロップされたパスから拡張子取得して決められたIndexを記録
+        //ファイル保存時に使う用
+        private void SetLastExtentionIndex(string path)
+        {
+            string ext = System.IO.Path.GetExtension(path);
+            switch (ext)
+            {
+                case ".png":
+                case ".PNG":
+                case ".Png":
+                    LastFileExtensionIndex = 1;
+                    break;
+                case ".bmp":
+                case ".Bmp":
+                case ".BMP":
+                    LastFileExtensionIndex = 3;
+                    break;
+                case ".jpg":
+                case ".Jpg":
+                case ".JPG":
+                case ".jpeg":
+                case ".JPEG":
+                    LastFileExtensionIndex = 2;
+                    break;
+                case ".gif":
+                case ".Gif":
+                case ".GIF":
+                    LastFileExtensionIndex = 4;
+                    break;
+                case ".tif":
+                case ".Tif":
+                case ".TIF":
+                case ".tiff":
+                case ".Tiff":
+                case ".TIFF":
+                    LastFileExtensionIndex = 5;
+                    break;
+                case ".hdp":
+                case ".Hdp":
+                case ".HDP":
+                case ".wdp":
+                case ".Wdp":
+                case ".WDP":
+                case ".jxr":
+                case ".Jxr":
+                case ".JXR":
+                    LastFileExtensionIndex = 6;
+                    break;
+                default:
+                    LastFileExtensionIndex = 1;
+                    break;
+            }
+        }
+
         //ImageThumbを作成
         private Image MakeImage(BitmapSource source)
         {
@@ -158,7 +217,7 @@ namespace Gourenga
         {
             if (img == null) return;
 
-                        
+            //作成、Zオーダー、サイズBinding、Canvasに追加、管理リストに追加、マウス移動イベント
             ImageThumb thumb = new(img);
             Panel.SetZIndex(thumb, MyThumbs.Count);
 
@@ -194,6 +253,7 @@ namespace Gourenga
 
         }
 
+        //ImageThumbのサイズとUpDownとBinding
         private void SetThumbSizeBinding(ImageThumb t)
         {
             Binding b = new();
@@ -201,10 +261,9 @@ namespace Gourenga
             b.Path = new PropertyPath(ControlLibraryCore20200620.NumericUpDown.MyValueProperty);
             t.MyImage.SetBinding(WidthProperty, b);
             t.MyImage.SetBinding(HeightProperty, b);
-
         }
 
-        //座標リスト更新
+        //座標リスト刷新、ImageThumb再配置、Canvasサイズ変更
         private void ChangeLocate()
         {
             if (MyThumbs == null) return;
@@ -238,6 +297,7 @@ namespace Gourenga
             }
         }
 
+        //MyCanvasのサイズ変更
         private void SetMyCanvasSize()
         {
             if (MyThumbs.Count == 0) return;
@@ -251,7 +311,6 @@ namespace Gourenga
 
             MyCanvas.Width = w;
             MyCanvas.Height = h;
-
         }
 
 
@@ -282,6 +341,7 @@ namespace Gourenga
                 }
             }
 
+            //入れ替え発生時
             //最短距離のIndexと移動中のThumbのIndexが違うなら入れ替え処理
             if (moyoriIndex != imaIndex)
             {
@@ -293,6 +353,7 @@ namespace Gourenga
                 SetLocate(moyoriIndex);
             }
         }
+
         //ドラッグ移動イベント時
         private void Thumb_DragDelta(object sender, DragDeltaEventArgs e)
         {
@@ -302,8 +363,8 @@ namespace Gourenga
             double y = Canvas.GetTop(t) + e.VerticalChange;
             Canvas.SetLeft(t, x);
             Canvas.SetTop(t, y);
-            t.Opacity = 0.5;
 
+            //入れ替え発生判定と入れ替え
             Idou移動中処理(t, x, y);
         }
 
@@ -314,40 +375,17 @@ namespace Gourenga
         }
         #endregion ドラッグ移動系
 
-        #region クリックとかのイベント関連
+
 
 
 
         #region 保存
-        //private void SaveFile()
-        //{
-        //    //描画する座標とサイズを取得
-        //    List<Rect> drawRects = MakeRects();
-
-        //    DrawingVisual dv = new();
-        //    using (var dc = dv.RenderOpen())
-        //    {
-        //        for (int i = 0; i < drawRects.Count; i++)
-        //        {
-        //            BitmapSource source = MyThumbs[i].MyImage.Source as BitmapSource;
-        //            dc.DrawImage(source, drawRects[i]);
-        //        }
-        //    }
-        //    //最終的な全体画像サイズ計算、RectのUnionを使う
-        //    Rect dRect = new();
-        //    for (int i = 0; i < drawRects.Count; i++)
-        //    {
-        //        dRect = Rect.Union(dRect, drawRects[i]);
-        //    }
-        //    int width = (int)dRect.Width;
-        //    int height = (int)dRect.Height;
-        //    RenderTargetBitmap render = new(width, height, 96, 96, PixelFormats.Pbgra32);
-        //    render.Render(dv);
-        //    SaveBitmapToPngFile(render, MakeSavePath());
-        //}
 
         //描画サイズと座標の計算
         //E:\オレ\エクセル\作りたいアプリのメモ.xlsm_2021031_$A$214
+        //左上から右下へ並べる
+        //アスペクト比は元画像から変更しない、サイズは横幅を基準に縦幅を変更
+        //行の高さはその行の最大縦幅にする(上下のムダな領域を消す)
         private List<Rect> MakeRects()
         {
             List<Rect> drawRects = new();
@@ -435,25 +473,18 @@ namespace Gourenga
             return path;
         }
 
-        //private void SaveBitmapToPngFile(BitmapSource source, string path)
-        //{
-        //    PngBitmapEncoder encoder = new();
-        //    encoder.Frames.Add(BitmapFrame.Create(source));
-        //    using (var fs = new System.IO.FileStream(
-        //        path, System.IO.FileMode.CreateNew, System.IO.FileAccess.Write))
-        //    {
-        //        encoder.Save(fs);
-        //    }
-        //}
 
-        //画像保存
+
+        //保存画像作成        
+        //DrawingContextに描画座標とサイズに従って1枚ずつ描画して
+        //RenderTargetBitmap作成
         private BitmapSource MakeSaveBitmap()
         {
             //描画する座標とサイズを取得
             List<Rect> drawRects = MakeRects();
 
             DrawingVisual dv = new();
-            using (var dc = dv.RenderOpen())
+            using (DrawingContext dc = dv.RenderOpen())
             {
                 for (int i = 0; i < drawRects.Count; i++)
                 {
@@ -473,6 +504,7 @@ namespace Gourenga
             render.Render(dv);
             return render;
         }
+
 
         private void SaveImage()
         {
@@ -571,71 +603,22 @@ namespace Gourenga
             return data;
         }
 
-        //ファイルパスから拡張子取得して決められたIndexを記録
-        private void SetLastExtentionIndex(string path)
-        {
-            string ext = System.IO.Path.GetExtension(path);
-            switch (ext)
-            {
-                case ".png":
-                case ".PNG":
-                case ".Png":
-                    LastFileExtensionIndex = 1;
-                    break;
-                case ".bmp":
-                case ".Bmp":
-                case ".BMP":
-                    LastFileExtensionIndex = 3;
-                    break;
-                case ".jpg":
-                case ".Jpg":
-                case ".JPG":
-                case ".jpeg":
-                case ".JPEG":
-                    LastFileExtensionIndex = 2;
-                    break;
-                case ".gif":
-                case ".Gif":
-                case ".GIF":
-                    LastFileExtensionIndex = 4;
-                    break;
-                case ".tif":
-                case ".Tif":
-                case ".TIF":
-                case ".tiff":
-                case ".Tiff":
-                case ".TIFF":
-                    LastFileExtensionIndex = 5;
-                    break;
-                case ".hdp":
-                case ".Hdp":
-                case ".HDP":
-                case ".wdp":
-                case ".Wdp":
-                case ".WDP":
-                case ".jxr":
-                case ".Jxr":
-                case ".JXR":
-                    LastFileExtensionIndex = 6;
-                    break;
-                default:
-                    LastFileExtensionIndex = 1;
-                    break;
-            }
-        }
 
         #endregion 保存
 
 
 
         //削除時
+        //管理用リストから削除
+        //MyCanvasから削除
+        //座標リストの最後の要素を削除、再配置、MyCanvasサイズ更新
+        //MyActiveThumbを変更
         private void RemoveThumb(ImageThumb t)
         {
             if (MyThumbs.Count == 0) return;
 
             int i = MyThumbs.IndexOf(t);
 
-            //MyActiveThumb = MyThumbs[i];
             MyThumbs.Remove(t);
             MyCanvas.Children.Remove(t);
             MyLocate.RemoveAt(MyLocate.Count - 1);
@@ -659,7 +642,7 @@ namespace Gourenga
 
 
 
-
+        #region クリックとかのイベント関連
 
         private void MyButtonTest_Click(object sender, RoutedEventArgs e)
         {
@@ -673,7 +656,6 @@ namespace Gourenga
         private void MyButtonSave_Click(object sender, RoutedEventArgs e)
         {
             if (MyThumbs.Count <= 0) return;
-            //SaveFile();
             SaveImage();
         }
 
@@ -704,20 +686,21 @@ namespace Gourenga
 
     }
 
-    public class Data : System.ComponentModel.INotifyPropertyChanged
+    //MainWindowのDataContextにBindingするデータ用クラス
+    public class Data// : System.ComponentModel.INotifyPropertyChanged
     {
-        public event PropertyChangedEventHandler PropertyChanged;
-        private void RaisePropertyChanged([CallerMemberName] string pName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(pName));
-        }
+        //public event PropertyChangedEventHandler PropertyChanged;
+        //private void RaisePropertyChanged([CallerMemberName] string pName = null)
+        //{
+        //    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(pName));
+        //}
 
         public int Row { get; set; } = 2;
         public int Col { get; set; } = 3;
         public int Size { get; set; } = 40;
 
 
-
+        //これはMainWindowの方で管理したほうが良かったかも
         public ObservableCollection<ImageThumb> MyThumbs { get; set; } = new();
 
 
@@ -726,7 +709,7 @@ namespace Gourenga
 
 
 
-
+    //保存範囲を示す枠(MyRectangle)のサイズ用
     public class MyConverterRectangleSize : IMultiValueConverter
     {
         public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)

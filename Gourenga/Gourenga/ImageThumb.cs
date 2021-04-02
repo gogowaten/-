@@ -17,11 +17,15 @@ using System.Windows.Input;
 using System.Windows.Navigation;
 
 using System.Globalization;
+
+//Thumbを継承
+//ControlTemplateを変更してCanvasパネルにImageと枠表示用のRectangleを追加したThumb
+//枠サイズはImageサイズとBinding
 namespace Gourenga
 {
     public class ImageThumb : Thumb
     {
-        public BitmapSource MyBitmapSource;
+        //public BitmapSource MyBitmapSource;
         public Image MyImage;
         private Canvas MyPanel;
         public Rectangle MyStrokeRectangle = new();
@@ -41,7 +45,7 @@ namespace Gourenga
 
             //waku
             MyStrokeRectangle.Visibility = Visibility.Collapsed;
-            MyStrokeRectangle.Stroke = Brushes.Cyan;
+            MyStrokeRectangle.Stroke = Brushes.Tomato;
             MyStrokeRectangle.StrokeThickness = 1.0;
             MyPanel.Children.Add(MyStrokeRectangle);
             _ = MyStrokeRectangle.SetBinding(WidthProperty, MakeBinding(img, WidthProperty, BindingMode.OneWay));

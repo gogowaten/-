@@ -26,20 +26,19 @@
                            MyMinValue="1" MyMaxValue="10" MyStringFormat="行数 00"
                            MyValue="{Binding Path=Row}"/>
         <nup:NumericUpDown Name="MyUpDownSize" MyValueChanged="MyUpDownSize_MyValueChanged"
-                           MyMinValue="40" MyMaxValue="240" MyStringFormat="1サイズ 000"
+                           MyMinValue="40" MyMaxValue="960" MyStringFormat="1サイズ 000"
                            MySmallChange="40" MyLargeChange="40"
                            MyValue="{Binding Path=Size}"/>
-        <Button x:Name="MyButtonTest" Content="test" Click="MyButtonTest_Click"/>
+        <Button x:Name="MyButtonTest" Content="test" Click="MyButtonTest_Click" Visibility="Collapsed"/>
         <Button x:Name="MyButtonSave" Content="保存" Click="MyButtonSave_Click"/>
         <Button x:Name="MyButtonRemove" Content="削除" Click="MyButtonRemove_Click"/>
 
       </Menu>
 
       <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-        <Canvas x:Name="MyCanvas" HorizontalAlignment="Left" VerticalAlignment="Top">
-          <!--Width="{Binding Path=MyThumbs.CanvasWidth}"
-              Height="{Binding Path=CanvasHeight}">-->
-          <Rectangle x:Name="MyRectangle" Stroke="MediumOrchid" StrokeThickness="2">
+        <Canvas x:Name="MyCanvas" Margin="10"
+                HorizontalAlignment="Left" VerticalAlignment="Top">
+          <Rectangle x:Name="MyRectangle" Stroke="Turquoise" StrokeThickness="2">
             <Rectangle.Resources>
               <local:MyConverterRectangleSize x:Key="Size"/>
             </Rectangle.Resources>
@@ -55,18 +54,6 @@
                 <Binding ElementName="MyUpDownSize" Path="MyValue"/>
               </MultiBinding>
             </Rectangle.Height>
-            <!--<Rectangle.Width>
-            <MultiBinding Converter="{StaticResource Size}">
-              <Binding Path="Col"/>
-              <Binding Path="Size"/>
-            </MultiBinding>
-          </Rectangle.Width>
-          <Rectangle.Height>
-            <MultiBinding Converter="{StaticResource Size}">
-              <Binding Path="Row"/>
-              <Binding Path="Size"/>
-            </MultiBinding>
-          </Rectangle.Height>-->
           </Rectangle>
         </Canvas>
       </ScrollViewer>

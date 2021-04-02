@@ -1,0 +1,40 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v5.0/win-x64",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v5.0": {},
+    ".NETCoreApp,Version=v5.0/win-x64": {
+      "Gourenga/1.0.0": {
+        "dependencies": {
+          "ControlLibraryCore20200620": "1.2.2.0"
+        },
+        "runtime": {
+          "Gourenga.dll": {}
+        }
+      },
+      "ControlLibraryCore20200620/1.2.2.0": {
+        "runtime": {
+          "ControlLibraryCore20200620.dll": {
+            "assemblyVersion": "1.2.2.0",
+            "fileVersion": "1.2.2.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "Gourenga/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "ControlLibraryCore20200620/1.2.2.0": {
+      "type": "reference",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}
