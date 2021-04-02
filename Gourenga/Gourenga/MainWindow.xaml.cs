@@ -63,10 +63,11 @@ namespace Gourenga
         }
         private void MyInitialize()
         {
-            BitmapEncoder encoder = new JpegBitmapEncoder();
-
+#if DEBUG
             this.Left = 0;
             this.Top = 0;
+#endif
+
             MyData = new();
             this.DataContext = MyData;
             MyThumbs = MyData.MyThumbs;
@@ -76,8 +77,6 @@ namespace Gourenga
             AppVersion = System.Diagnostics.FileVersionInfo.GetVersionInfo(coms[0]).FileVersion;
             this.Title = APP_NAME + AppVersion;
         }
-
-
 
 
         /// <summary>
@@ -112,19 +111,24 @@ namespace Gourenga
             return source;
         }
 
+        //ファイルドロップ時
         private void Window_Drop(object sender, DragEventArgs e)
         {
             if (e.Data.GetDataPresent(DataFormats.FileDrop) == false) return;
+            //ファイルパス取得
             var datas = (string[])e.Data.GetData(DataFormats.FileDrop);
             var paths = datas.ToList();
             paths.Sort();
 
+            //画像ファイルからBitmapsource取得してImageThumb作成
+            //Zオーダー指定
             for (int i = 0; i < paths.Count; i++)
             {
-                AddImage(MakeBitmapSourceBgra32FromFile(paths[i]));
+                AddImageThumb(MakeImage(MakeBitmapSourceBgra32FromFile(paths[i])));
             }
             Panel.SetZIndex(MyRectangle, MyThumbs.Count + 1);
-            //SetMyCanvasSize();
+
+            ChangeLocate();
 
             if (MyActiveThumb == null)
             {
@@ -132,34 +136,36 @@ namespace Gourenga
             }
 
             //最初のファイルのフォルダパス、ファイル名、拡張子を記録
+            //これらは保存ダイアログ表示のときに使う
             LastDirectory = System.IO.Path.GetDirectoryName(paths[0]);
             LastFileName = System.IO.Path.GetFileNameWithoutExtension(paths[0]);
             SetLastExtentionIndex(paths[0]);
         }
 
-        private void AddImage(BitmapSource source)
+        //ImageThumbを作成
+        private Image MakeImage(BitmapSource source)
         {
-            if (source == null) return;
+            if (source == null) return null;
 
             Image img = new() { Source = source, StretchDirection = StretchDirection.DownOnly };
             img.Width = MyData.Size;
             img.Height = MyData.Size;
+            return img;
+        }
 
-            int i = MyThumbs.Count;
-            int x = i % MyData.Col * MyData.Size;
-            int y = (int)((double)i / MyData.Col) * MyData.Size;
-            MyLocate.Add(new Point(x, y));
-            ImageThumb thumb = new(img);// new(img, 0, 0, x, y);
+        //ImageThumb作成
+        private void AddImageThumb(Image img)
+        {
+            if (img == null) return;
 
-            Canvas.SetLeft(thumb, x);
-            Canvas.SetTop(thumb, y);
+                        
+            ImageThumb thumb = new(img);
+            Panel.SetZIndex(thumb, MyThumbs.Count);
+
             SetThumbSizeBinding(thumb);
 
             MyCanvas.Children.Add(thumb);
-            Panel.SetZIndex(thumb, i);
             MyThumbs.Add(thumb);
-            thumb.Width = MyData.Size;
-            thumb.Height = MyData.Size;
 
             //マウスドラッグ移動
             //開始時
@@ -168,7 +174,7 @@ namespace Gourenga
                 //最上面表示、インデックス取得
                 Panel.SetZIndex(thumb, MyThumbs.Count);
 
-                thumb.Opacity = 0.5;                
+                thumb.Opacity = 0.5;
                 MyActiveThumb = thumb;
             };
 
@@ -186,7 +192,6 @@ namespace Gourenga
                 Canvas.SetTop(thumb, MyLocate[index].Y);
             };
 
-            SetMyCanvasSize();
         }
 
         private void SetThumbSizeBinding(ImageThumb t)
@@ -203,11 +208,13 @@ namespace Gourenga
         private void ChangeLocate()
         {
             if (MyThumbs == null) return;
+
+            MyLocate.Clear();
             for (int i = 0; i < MyThumbs.Count; i++)
             {
                 int x = i % MyData.Col * MyData.Size;
                 int y = (int)((double)i / MyData.Col) * MyData.Size;
-                MyLocate[i] = new Point(x, y);
+                MyLocate.Add(new Point(x, y));
             }
             SetLocate();
             SetMyCanvasSize();

@@ -4,15 +4,15 @@
 winexe
 C#
 .cs
-C:\Users\waten\Source\Repos\gourenga\Gourenga\Gourenga\obj\Debug\net5.0-windows\
+C:\Users\waten\Source\Repos\gourenga\Gourenga\Gourenga\obj\Release\net5.0-windows\
 Gourenga
 none
 false
-TRACE;DEBUG;NET;NET5_0;NETCOREAPP
+TRACE;RELEASE;NET;NET5_0;NETCOREAPP
 C:\Users\waten\Source\Repos\gourenga\Gourenga\Gourenga\App.xaml
 11407045341
 
-6-2032632583
+6433796943
 1941916307650
 MainWindow.xaml;
 
