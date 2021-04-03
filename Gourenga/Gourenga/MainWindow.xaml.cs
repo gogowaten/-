@@ -318,17 +318,17 @@ namespace Gourenga
 
         #region ドラッグ移動系
 
-
+       
         /// <summary>
         /// ドラッグ移動中のThumbとその他のThumbとの重なり合う部分の面積を計算、
         /// 一定以上の面積があった場合、場所を入れ替えて整列
         /// </summary>
-        /// <param name="t">ドラッグ移動中のThumb</param>
+        /// <param name="imaT">ドラッグ移動中のThumb</param>
         /// <param name="x">Canvas上でのX座標</param>
         /// <param name="y">Canvas上でのY座標</param>
-        private void Idou移動中処理(ImageThumb t, double x, double y)
+        private void Idou移動中処理(ImageThumb imaT, double x, double y)
         {
-            int imaIndex = MyThumbs.IndexOf(t);//ドラッグ移動中ThumbのIndex            
+            int imaIndex = MyThumbs.IndexOf(imaT);//ドラッグ移動中ThumbのIndex
 
 
             //最寄りのPoint
@@ -343,8 +343,8 @@ namespace Gourenga
                     moyoriIndex = i;
                 }
             }
-                        
-            //最短距離のThumbIndexと移動中のThumbのIndexが違うなら入れ替え処理            
+
+            //最短距離のThumbIndexと移動中のThumbのIndexが違うなら入れ替え処理
             if (moyoriIndex != imaIndex)
             {
                 //挿入モードのとき
@@ -355,83 +355,39 @@ namespace Gourenga
                 //入れ替えモードのとき
                 else
                 {
-                    //移動開始時のIndexと今のIndexが同じ時
-                    if (MyThumbs[OriginalIndex] == t)
+                    ImageThumb moyoriT = MyThumbs[moyoriIndex];
+                    ImageThumb originT = MyThumbs[OriginalIndex];
+
+                    //移動開始地点のThumbIndexと今移動中のThumbIndexが同じ時
+                    if (OriginalIndex == imaIndex)
                     {
-                        var temp = MyThumbs[moyoriIndex];
-                        MyThumbs.Move(imaIndex, moyoriIndex);
-                        MyThumbs.Remove(temp);
-                        MyThumbs.Insert(OriginalIndex, temp);
+                        //今移動中と最寄りのThumbを入れ替え
+                        MyThumbs.Move(MyThumbs.IndexOf(imaT), moyoriIndex);
+                        MyThumbs.Move(MyThumbs.IndexOf(moyoriT), OriginalIndex);
                     }
 
-
+                    //違うとき
                     else
                     {
-                        ImageThumb imaT = MyThumbs[imaIndex];
-                        ImageThumb moyoriT = MyThumbs[moyoriIndex];
-                        ImageThumb originT = MyThumbs[OriginalIndex];
                         //最寄りのThumbIndexと移動開始時のIndexが同じ時
                         if (moyoriIndex == OriginalIndex)
                         {
-                            var temp = MyThumbs[moyoriIndex];
-                            MyThumbs.Move(imaIndex, moyoriIndex);
-                            MyThumbs.Remove(temp);
-                            MyThumbs.Insert(imaIndex, temp);
+                            //移動開始地点と今移動中のThumbを入れ替え
+                            MyThumbs.Move(MyThumbs.IndexOf(originT), imaIndex);
+                            MyThumbs.Move(MyThumbs.IndexOf(imaT), OriginalIndex);
                         }
-                        //一旦3つのThumbをリストから削除したのち、それぞれをIndexが小さい順に挿入
-                        //最寄りIndexに今移動中のThumb
-                        //今移動中のIndexに移動開始地点にあるThumb
-                        //移動開始Indexに最寄りのThumb
+
+                        //違うとき
                         else
                         {
-                            //リストから削除
-                            MyThumbs.Remove(imaT);
-                            MyThumbs.Remove(moyoriT);
-                            MyThumbs.Remove(originT);
-                            //Indexが小さい順にリストに挿入
-                            //移動開始Index > 最寄りのIndex > 今移動中のIndexのときは
-                            //今、最寄り、移動開始の順に挿入
-                            if (OriginalIndex > moyoriIndex && moyoriIndex > imaIndex)
-                            {
-                                MyThumbs.Insert(imaIndex, originT);
-                                MyThumbs.Insert(moyoriIndex, imaT);
-                                MyThumbs.Insert(OriginalIndex, moyoriT);
-                            }
-                            else if (moyoriIndex > imaIndex && imaIndex > OriginalIndex)
-                            {
-                                MyThumbs.Insert(OriginalIndex, moyoriT);
-                                MyThumbs.Insert(imaIndex, originT);
-                                MyThumbs.Insert(moyoriIndex, imaT);
-                            }
-                            else if (imaIndex > OriginalIndex && OriginalIndex > moyoriIndex)
-                            {
-                                MyThumbs.Insert(moyoriIndex, imaT);
-                                MyThumbs.Insert(OriginalIndex, moyoriT);
-                                MyThumbs.Insert(imaIndex, originT);
-                            }
-                            else if (OriginalIndex > imaIndex && imaIndex > moyoriIndex)
-                            {
-                                MyThumbs.Insert(moyoriIndex, imaT);
-                                MyThumbs.Insert(imaIndex, originT);
-                                MyThumbs.Insert(OriginalIndex, moyoriT);
-                            }
-                            else if (moyoriIndex > OriginalIndex && OriginalIndex > imaIndex)
-                            {
-                                MyThumbs.Insert(imaIndex, originT);
-                                MyThumbs.Insert(OriginalIndex, moyoriT);
-                                MyThumbs.Insert(moyoriIndex, imaT);
-                            }
-                            else if (imaIndex > moyoriIndex && moyoriIndex > OriginalIndex)
-                            {
-                                MyThumbs.Insert(OriginalIndex, moyoriT);
-                                MyThumbs.Insert(moyoriIndex, imaT);
-                                MyThumbs.Insert(imaIndex, originT);
-                            }
-
+                            //移動開始地点と今移動中のThumbを入れ替え
+                            MyThumbs.Move(MyThumbs.IndexOf(originT), imaIndex);
+                            MyThumbs.Move(MyThumbs.IndexOf(imaT), OriginalIndex);
+                            //今移動中と最寄りのThumbを入れ替え
+                            MyThumbs.Move(MyThumbs.IndexOf(imaT), moyoriIndex);
+                            MyThumbs.Move(MyThumbs.IndexOf(moyoriT), OriginalIndex);
                         }
-
                     }
-
                 }
 
 
@@ -792,7 +748,7 @@ namespace Gourenga
 
         public int Row { get; set; } = 2;
         public int Col { get; set; } = 3;
-        public int Size { get; set; } = 40;
+        public int Size { get; set; } = 120;
         //ドラッグ移動での入れ替えモード、trueで入れ替え、falseは挿入
         public bool IsSwap { get; set; } = true;
 
