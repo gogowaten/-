@@ -50,14 +50,14 @@ namespace Gourenga
                 }
             }
         }
-        
+
 
         private List<Point> MyLocate = new();//座標リスト
         private Data MyData;//DataContextに指定する
         private string LastDirectory;//ドロップしたファイルのフォルダパス
         private string LastFileName;//ドロップしたファイル名
         private int LastFileExtensionIndex;//ドロップしたファイルの拡張子判別用インデックス
-
+        private int OriginalIndex;//移動前のIndex
 
         public MainWindow()
         {
@@ -235,6 +235,8 @@ namespace Gourenga
 
                 thumb.Opacity = 0.5;
                 MyActiveThumb = thumb;
+                //今のIndexを記録
+                OriginalIndex = MyThumbs.IndexOf(thumb);
             };
 
             //移動中
@@ -328,6 +330,7 @@ namespace Gourenga
         {
             int imaIndex = MyThumbs.IndexOf(t);//ドラッグ移動中ThumbのIndex            
 
+
             //最寄りのPoint
             int moyoriIndex = 0;
             double moyori距離 = double.MaxValue;
@@ -340,18 +343,103 @@ namespace Gourenga
                     moyoriIndex = i;
                 }
             }
-
-            //入れ替え発生時
-            //最短距離のIndexと移動中のThumbのIndexが違うなら入れ替え処理
+                        
+            //最短距離のThumbIndexと移動中のThumbのIndexが違うなら入れ替え処理            
             if (moyoriIndex != imaIndex)
             {
-                //Thumbリストのindexを入れ替え
-                MyThumbs.RemoveAt(imaIndex);
-                MyThumbs.Insert(moyoriIndex, t);
+                //挿入モードのとき
+                if (MyData.IsSwap == false)
+                {
+                    MyThumbs.Move(imaIndex, moyoriIndex);
+                }
+                //入れ替えモードのとき
+                else
+                {
+                    //移動開始時のIndexと今のIndexが同じ時
+                    if (MyThumbs[OriginalIndex] == t)
+                    {
+                        var temp = MyThumbs[moyoriIndex];
+                        MyThumbs.Move(imaIndex, moyoriIndex);
+                        MyThumbs.Remove(temp);
+                        MyThumbs.Insert(OriginalIndex, temp);
+                    }
+
+
+                    else
+                    {
+                        ImageThumb imaT = MyThumbs[imaIndex];
+                        ImageThumb moyoriT = MyThumbs[moyoriIndex];
+                        ImageThumb originT = MyThumbs[OriginalIndex];
+                        //最寄りのThumbIndexと移動開始時のIndexが同じ時
+                        if (moyoriIndex == OriginalIndex)
+                        {
+                            var temp = MyThumbs[moyoriIndex];
+                            MyThumbs.Move(imaIndex, moyoriIndex);
+                            MyThumbs.Remove(temp);
+                            MyThumbs.Insert(imaIndex, temp);
+                        }
+                        //一旦3つのThumbをリストから削除したのち、それぞれをIndexが小さい順に挿入
+                        //最寄りIndexに今移動中のThumb
+                        //今移動中のIndexに移動開始地点にあるThumb
+                        //移動開始Indexに最寄りのThumb
+                        else
+                        {
+                            //リストから削除
+                            MyThumbs.Remove(imaT);
+                            MyThumbs.Remove(moyoriT);
+                            MyThumbs.Remove(originT);
+                            //Indexが小さい順にリストに挿入
+                            //移動開始Index > 最寄りのIndex > 今移動中のIndexのときは
+                            //今、最寄り、移動開始の順に挿入
+                            if (OriginalIndex > moyoriIndex && moyoriIndex > imaIndex)
+                            {
+                                MyThumbs.Insert(imaIndex, originT);
+                                MyThumbs.Insert(moyoriIndex, imaT);
+                                MyThumbs.Insert(OriginalIndex, moyoriT);
+                            }
+                            else if (moyoriIndex > imaIndex && imaIndex > OriginalIndex)
+                            {
+                                MyThumbs.Insert(OriginalIndex, moyoriT);
+                                MyThumbs.Insert(imaIndex, originT);
+                                MyThumbs.Insert(moyoriIndex, imaT);
+                            }
+                            else if (imaIndex > OriginalIndex && OriginalIndex > moyoriIndex)
+                            {
+                                MyThumbs.Insert(moyoriIndex, imaT);
+                                MyThumbs.Insert(OriginalIndex, moyoriT);
+                                MyThumbs.Insert(imaIndex, originT);
+                            }
+                            else if (OriginalIndex > imaIndex && imaIndex > moyoriIndex)
+                            {
+                                MyThumbs.Insert(moyoriIndex, imaT);
+                                MyThumbs.Insert(imaIndex, originT);
+                                MyThumbs.Insert(OriginalIndex, moyoriT);
+                            }
+                            else if (moyoriIndex > OriginalIndex && OriginalIndex > imaIndex)
+                            {
+                                MyThumbs.Insert(imaIndex, originT);
+                                MyThumbs.Insert(OriginalIndex, moyoriT);
+                                MyThumbs.Insert(moyoriIndex, imaT);
+                            }
+                            else if (imaIndex > moyoriIndex && moyoriIndex > OriginalIndex)
+                            {
+                                MyThumbs.Insert(OriginalIndex, moyoriT);
+                                MyThumbs.Insert(moyoriIndex, imaT);
+                                MyThumbs.Insert(imaIndex, originT);
+                            }
+
+                        }
+
+                    }
+
+                }
+
 
                 //indexに従って表示位置変更
                 SetLocate(moyoriIndex);
             }
+
+
         }
 
         //ドラッグ移動イベント時
@@ -363,6 +451,7 @@ namespace Gourenga
             double y = Canvas.GetTop(t) + e.VerticalChange;
             Canvas.SetLeft(t, x);
             Canvas.SetTop(t, y);
+
 
             //入れ替え発生判定と入れ替え
             Idou移動中処理(t, x, y);
@@ -399,19 +488,25 @@ namespace Gourenga
             //指定横幅に縮小、アスペクト比は保持
             for (int i = 0; i < saveImageCount; i++)
             {
-                //サイズ
+                //縮小サイズ決定、指定サイズの正方形に収まるようにアスペクト比保持で縮小
+                //縦横それぞれの縮小率計算して小さい方に合わせる
+                //拡大はしないので縮小率が1以上なら1に抑える
                 BitmapSource bmp = MyThumbs[i].MyImage.Source as BitmapSource;
-                double width = bmp.PixelWidth;
-                double ratio = MyData.Size / width;
+                double w = bmp.PixelWidth;
+                double h = bmp.PixelHeight;
+                double widthRatio = MyData.Size / w;
+                double heightRatio = MyData.Size / h;
+                double ratio = Math.Min(widthRatio, heightRatio);
                 if (ratio > 1) ratio = 1;
-                width *= ratio;
+                w *= ratio;
+                h *= ratio;
 
                 //X座標、中央揃え
                 double x = (i % MasuYoko) * MyData.Size;
-                x = x + (MyData.Size - width) / 2;
+                x = x + (MyData.Size - w) / 2;
 
                 //Y座標は後で計算
-                drawRects.Add(new(x, 0, width, bmp.PixelHeight * ratio));
+                drawRects.Add(new(x, 0, w, h));
             }
 
             //Y座標計算
@@ -649,7 +744,7 @@ namespace Gourenga
             var data = MyData;
             var size = MyData.Size;
             var row = MyData.Row;
-            MyThumbs[0].MyStrokeRectangle.Visibility = Visibility.Visible;
+            //MyThumbs[0].MyStrokeRectangle.Visibility = Visibility.Visible;
 
         }
 
@@ -698,7 +793,8 @@ namespace Gourenga
         public int Row { get; set; } = 2;
         public int Col { get; set; } = 3;
         public int Size { get; set; } = 40;
-
+        //ドラッグ移動での入れ替えモード、trueで入れ替え、falseは挿入
+        public bool IsSwap { get; set; } = true;
 
         //これはMainWindowの方で管理したほうが良かったかも
         public ObservableCollection<ImageThumb> MyThumbs { get; set; } = new();
@@ -708,7 +804,7 @@ namespace Gourenga
 
 
 
-
+    #region コンバーター
     //保存範囲を示す枠(MyRectangle)のサイズ用
     public class MyConverterRectangleSize : IMultiValueConverter
     {
@@ -725,5 +821,21 @@ namespace Gourenga
         }
     }
 
+    //ドラッグ移動での入れ替えモード、trueで入れ替え、falseは挿入
+    public class MyConverterIsSwap : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            bool b = (bool)value;
+            return !b;
+        }
 
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            bool b = (bool)value;
+            return !b;
+        }
+    }
+
+    #endregion コンバーター
 }

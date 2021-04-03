@@ -19,6 +19,9 @@
         <StatusBarItem x:Name="MyStatusItem1" Content="item1"/>
       </StatusBar>
       <Menu DockPanel.Dock="Top">
+        <Menu.Resources>
+          <local:MyConverterIsSwap x:Key="Swap"/>
+        </Menu.Resources>
         <nup:NumericUpDown Name="MyUpDownCol" MyValueChanged="MyUpDownCol_MyValueChanged"
                            MyMinValue="1" MyMaxValue="10" MyStringFormat="列数 00"
                            MyValue="{Binding Path=Col}"/>
@@ -32,7 +35,8 @@
         <Button x:Name="MyButtonTest" Content="test" Click="MyButtonTest_Click" Visibility="Collapsed"/>
         <Button x:Name="MyButtonSave" Content="保存" Click="MyButtonSave_Click"/>
         <Button x:Name="MyButtonRemove" Content="削除" Click="MyButtonRemove_Click"/>
-
+        <RadioButton Content="入替" IsChecked="{Binding IsSwap}"/>
+        <RadioButton Content="挿入" IsChecked="{Binding IsSwap, Converter={StaticResource Swap}}"/>
       </Menu>
 
       <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
