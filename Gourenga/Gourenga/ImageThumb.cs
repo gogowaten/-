@@ -25,7 +25,7 @@ namespace Gourenga
 {
     public class ImageThumb : Thumb
     {
-        //public BitmapSource MyBitmapSource;
+        public BitmapSource MyBitmapSource;
         public Image MyImage;
         private Canvas MyPanel;
         public Rectangle MyStrokeRectangle = new();
@@ -42,6 +42,7 @@ namespace Gourenga
 
             MyPanel.Children.Add(img);
             MyImage = img;
+            MyBitmapSource = img.Source as BitmapSource;
 
             //waku
             MyStrokeRectangle.Visibility = Visibility.Collapsed;

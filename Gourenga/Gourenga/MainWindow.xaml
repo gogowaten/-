@@ -9,36 +9,84 @@
         Title="MainWindow" Height="450" Width="600"
         ResizeMode="CanResizeWithGrip"
         AllowDrop="True"
-        Drop="Window_Drop">
+        Drop="Window_Drop"
+        PreviewKeyDown="Window_PreviewKeyDown">
   <Window.DataContext>
     <local:Data/>
   </Window.DataContext>
   <Grid UseLayoutRounding="True">
     <DockPanel>
+      <DockPanel.Resources>
+        <local:MyConverterBoolReverce x:Key="bool"/>
+      </DockPanel.Resources>
       <StatusBar DockPanel.Dock="Bottom">
         <StatusBarItem x:Name="MyStatusItem1" Content="item1"/>
       </StatusBar>
       <Menu DockPanel.Dock="Top">
-        <Menu.Resources>
-          <local:MyConverterIsSwap x:Key="Swap"/>
-        </Menu.Resources>
-        <nup:NumericUpDown Name="MyUpDownCol" MyValueChanged="MyUpDownCol_MyValueChanged"
-                           MyMinValue="1" MyMaxValue="10" MyStringFormat="列数 00"
-                           MyValue="{Binding Path=Col}"/>
-        <nup:NumericUpDown Name="MyUpDownRow" MyValueChanged="MyUpDownRow_MyValueChanged"
-                           MyMinValue="1" MyMaxValue="10" MyStringFormat="行数 00"
-                           MyValue="{Binding Path=Row}"/>
-        <nup:NumericUpDown Name="MyUpDownSize" MyValueChanged="MyUpDownSize_MyValueChanged"
-                           MyMinValue="40" MyMaxValue="960" MyStringFormat="1サイズ 000"
-                           MySmallChange="40" MyLargeChange="40"
-                           MyValue="{Binding Path=Size}"/>
         <Button x:Name="MyButtonTest" Content="test" Click="MyButtonTest_Click" Visibility="Collapsed"/>
         <Button x:Name="MyButtonSave" Content="保存" Click="MyButtonSave_Click"/>
-        <Button x:Name="MyButtonRemove" Content="削除" Click="MyButtonRemove_Click"/>
-        <RadioButton Content="入替" IsChecked="{Binding IsSwap}"/>
-        <RadioButton Content="挿入" IsChecked="{Binding IsSwap, Converter={StaticResource Swap}}"/>
+        <Button x:Name="MyButtonRemove" Content="削除" Click="MyButtonRemove_Click"/>       
       </Menu>
+      
+      <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
+        <StackPanel Margin="10">
+          <GroupBox Header="連結範囲">
+            <StackPanel Orientation="Horizontal">
+              <nup:NumericUpDown Name="MyUpDownCol" MyValueChanged="MyUpDownCol_MyValueChanged"
+                           MyMinValue="1" MyMaxValue="10" MyStringFormat="横数 00"
+                           MyValue="{Binding Path=Col}" MinWidth="60"/>
+              <nup:NumericUpDown Name="MyUpDownRow" MyValueChanged="MyUpDownRow_MyValueChanged"
+                           MyMinValue="1" MyMaxValue="10" MyStringFormat="縦数 00"
+                           MyValue="{Binding Path=Row}" MinWidth="60" Margin="10,0,0,0"/>
+            </StackPanel>
+          </GroupBox>
+          <nup:NumericUpDown Name="MyUpDownSize" MyValueChanged="MyUpDownSize_MyValueChanged"
+                           MyMinValue="40" MyMaxValue="960" MyStringFormat="1表示サイズ 000"
+                           MySmallChange="40" MyLargeChange="40" MinWidth="100" MyTextAlignment="Center"
+                           MyValue="{Binding Path=Size}" Margin="0,4,0,0"/>
+        </StackPanel>
+        
+        <StackPanel Margin="10">
+          <StackPanel.Resources>
+            <Style TargetType="nup:NumericUpDown">
+              <Setter Property="Margin" Value="10,0,0,0"/>
+            </Style>
+          </StackPanel.Resources>
+          <GroupBox Header="保存サイズ指定">
+            <StackPanel Orientation="Vertical">
+              <StackPanel Orientation="Horizontal" Margin="15,0,0,10">
+                <RadioButton Content="1つあたり" VerticalAlignment="Center" MinWidth="70"
+                           IsChecked="{Binding IsSaveSizeOneWidth}"/>
+                <nup:NumericUpDown Name="MyUpDownOneWidth" MyValueChanged="MyUpDownSize_MyValueChanged"
+                           MyMinValue="1" MyMaxValue="1200" MyStringFormat="横 00000"
+                           MySmallChange="1" MyLargeChange="40" MinWidth="70"
+                           MyValue="{Binding Path=SaveOneWidth}"/>
 
+              </StackPanel>
+              <StackPanel Orientation="Horizontal" Margin="15,0,0,0">
+                <RadioButton Content="全体サイズ"  VerticalAlignment="Center" MinWidth="70"
+                           IsChecked="{Binding IsSaveSizeOneWidth, Converter={StaticResource bool}}"/>
+                <nup:NumericUpDown Name="MyUpDownWidth" MyValueChanged="MyUpDownSize_MyValueChanged"
+                           MyMinValue="1" MyMaxValue="10240" MyStringFormat="横 00000"
+                           MySmallChange="1" MyLargeChange="40" MinWidth="70"
+                           MyValue="{Binding Path=SaveWidth}"/>
+                <nup:NumericUpDown Name="MyUpDownHeight" MyValueChanged="MyUpDownSize_MyValueChanged"
+                           MyMinValue="1" MyMaxValue="10240" MyStringFormat="縦 00000"
+                           MySmallChange="1" MyLargeChange="40" MinWidth="70"
+                           MyValue="{Binding Path=SaveHeight}"/>
+              </StackPanel>
+            </StackPanel>
+          </GroupBox>
+        </StackPanel>
+        
+        <GroupBox Header="移動" Margin="10">
+          <StackPanel Orientation="Vertical">
+            <RadioButton Content="入替" Margin="10" IsChecked="{Binding IsSwap}"/>
+            <RadioButton Content="挿入" Margin="10,0,0,0" IsChecked="{Binding IsSwap, Converter={StaticResource bool}}"/>
+          </StackPanel>
+        </GroupBox>
+        
+      </StackPanel>
       <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
         <Canvas x:Name="MyCanvas" Margin="10"
                 HorizontalAlignment="Left" VerticalAlignment="Top">
