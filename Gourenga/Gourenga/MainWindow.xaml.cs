@@ -726,7 +726,7 @@ namespace Gourenga
             //List<Rect> drawRects = MakeRects2();
             //List<Rect> drawRects = MakeRectsTate();
             //List<Rect> drawRects = MakeRects();
-            List<Rect> drawRects = new();
+            List<Rect> drawRects;
             if (MyData.IsSaveSizeOneWidth)
             {
                 drawRects = MakeRects3();

@@ -6,7 +6,7 @@
         xmlns:nup="clr-namespace:ControlLibraryCore20200620;assembly=ControlLibraryCore20200620"
         xmlns:local="clr-namespace:Gourenga"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="600"
+        Title="MainWindow" Height="451" Width="614"
         ResizeMode="CanResizeWithGrip"
         AllowDrop="True"
         Drop="Window_Drop"
@@ -25,9 +25,9 @@
       <Menu DockPanel.Dock="Top">
         <Button x:Name="MyButtonTest" Content="test" Click="MyButtonTest_Click" Visibility="Collapsed"/>
         <Button x:Name="MyButtonSave" Content="保存" Click="MyButtonSave_Click"/>
-        <Button x:Name="MyButtonRemove" Content="削除" Click="MyButtonRemove_Click"/>       
+        <Button x:Name="MyButtonRemove" Content="削除" Click="MyButtonRemove_Click"/>
       </Menu>
-      
+
       <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
         <StackPanel Margin="10">
           <GroupBox Header="連結範囲">
@@ -45,7 +45,14 @@
                            MySmallChange="40" MyLargeChange="40" MinWidth="100" MyTextAlignment="Center"
                            MyValue="{Binding Path=Size}" Margin="0,4,0,0"/>
         </StackPanel>
-        
+
+        <GroupBox Header="移動" Margin="10">
+          <StackPanel Orientation="Vertical">
+            <RadioButton Content="入替" Margin="10" IsChecked="{Binding IsSwap}"/>
+            <RadioButton Content="挿入" Margin="10,0,0,0" IsChecked="{Binding IsSwap, Converter={StaticResource bool}}"/>
+          </StackPanel>
+        </GroupBox>
+
         <StackPanel Margin="10">
           <StackPanel.Resources>
             <Style TargetType="nup:NumericUpDown">
@@ -78,14 +85,7 @@
             </StackPanel>
           </GroupBox>
         </StackPanel>
-        
-        <GroupBox Header="移動" Margin="10">
-          <StackPanel Orientation="Vertical">
-            <RadioButton Content="入替" Margin="10" IsChecked="{Binding IsSwap}"/>
-            <RadioButton Content="挿入" Margin="10,0,0,0" IsChecked="{Binding IsSwap, Converter={StaticResource bool}}"/>
-          </StackPanel>
-        </GroupBox>
-        
+
       </StackPanel>
       <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
         <Canvas x:Name="MyCanvas" Margin="10"
