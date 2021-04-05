@@ -29,6 +29,7 @@ namespace Gourenga
         public Image MyImage;
         private Canvas MyPanel;
         public Rectangle MyStrokeRectangle = new();
+        public Rectangle MyStrokeRectangle2 = new();
       
 
         public ImageThumb(Image img)
@@ -45,9 +46,19 @@ namespace Gourenga
             MyBitmapSource = img.Source as BitmapSource;
 
             //waku
+            MyStrokeRectangle2.Visibility = Visibility.Collapsed;
+            MyStrokeRectangle2.Stroke = Brushes.White;
+            MyStrokeRectangle2.StrokeThickness = 2.0;
+            //MyStrokeRectangle.StrokeDashArray = new DoubleCollection() { 1 };
+            MyPanel.Children.Add(MyStrokeRectangle2);
+            _ = MyStrokeRectangle2.SetBinding(WidthProperty, MakeBinding(img, WidthProperty, BindingMode.OneWay));
+            _ = MyStrokeRectangle2.SetBinding(HeightProperty, MakeBinding(img, HeightProperty, BindingMode.OneWay));
+            MyStrokeRectangle2.SetBinding(VisibilityProperty, MakeBinding(MyStrokeRectangle, VisibilityProperty, BindingMode.OneWay));
+            
             MyStrokeRectangle.Visibility = Visibility.Collapsed;
-            MyStrokeRectangle.Stroke = Brushes.Tomato;
-            MyStrokeRectangle.StrokeThickness = 1.0;
+            MyStrokeRectangle.Stroke = Brushes.Magenta;
+            MyStrokeRectangle.StrokeThickness = 2.0;
+            MyStrokeRectangle.StrokeDashArray = new DoubleCollection() { 2,2 };
             MyPanel.Children.Add(MyStrokeRectangle);
             _ = MyStrokeRectangle.SetBinding(WidthProperty, MakeBinding(img, WidthProperty, BindingMode.OneWay));
             _ = MyStrokeRectangle.SetBinding(HeightProperty, MakeBinding(img, HeightProperty, BindingMode.OneWay));

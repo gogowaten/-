@@ -21,15 +21,31 @@
       </DockPanel.Resources>
       <StatusBar DockPanel.Dock="Bottom">
         <StatusBarItem x:Name="MyStatusItem1" Content="item1"/>
+        <Separator/>
+        <StatusBarItem x:Name="MyStatusItemSaveImageSize" Content="save image size"/>
       </StatusBar>
-      <Menu DockPanel.Dock="Top">
+      <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Background="WhiteSmoke">
+        <StackPanel.Resources>
+          <Style TargetType="Button">
+            <Setter Property="Margin" Value="5,4"/>
+          </Style>
+        </StackPanel.Resources>
         <Button x:Name="MyButtonTest" Content="test" Click="MyButtonTest_Click" Visibility="Collapsed"/>
         <Button x:Name="MyButtonSave" Content="保存" Click="MyButtonSave_Click"/>
         <Button x:Name="MyButtonRemove" Content="削除" Click="MyButtonRemove_Click"/>
+        <Button x:Name="MyButtonRemoveArea" Content="範囲削除" Click="MyButtonRemoveArea_Click"/>
+        <Button x:Name="MyButtonClear" Content="全削除" Click="MyButtonClear_Click"/>
         <Button x:Name="MyButtonToClipboard" Content="コピー" Click="MyButtonToClipboard_Click"/>
         <Button x:Name="MyButtonFromClipboard" Content="貼り付け" Click="MyButtonFromClipboard_Click"/>
-      </Menu>
+      </StackPanel>
 
+      <!--<Expander DockPanel.Dock="Top" Header="expander" IsExpanded="True" ExpandDirection="Down">
+        <StackPanel>
+          <TextBlock Text="text"/>
+          <TextBlock Text="text"/>
+        </StackPanel>
+      </Expander>-->
+      
       <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
         <StackPanel Margin="10">
           <GroupBox Header="連結範囲">
@@ -48,9 +64,9 @@
                            MyValue="{Binding Path=Size}" Margin="0,4,0,0"/>
         </StackPanel>
 
-        <GroupBox Header="移動" Margin="10">
+        <GroupBox Header="入替モード" Margin="10">
           <StackPanel Orientation="Vertical">
-            <RadioButton Content="入替" Margin="10" IsChecked="{Binding IsSwap}"/>
+            <RadioButton Content="交換" Margin="10" IsChecked="{Binding IsSwap}"/>
             <RadioButton Content="挿入" Margin="10,0,0,0" IsChecked="{Binding IsSwap, Converter={StaticResource bool}}"/>
           </StackPanel>
         </GroupBox>
@@ -63,8 +79,8 @@
           </StackPanel.Resources>
           <GroupBox Header="保存サイズ指定">
             <StackPanel Orientation="Vertical">
-              <StackPanel Orientation="Horizontal" Margin="15,0,0,10">
-                <RadioButton Content="1つあたり" VerticalAlignment="Center" MinWidth="70"
+              <StackPanel Orientation="Horizontal" Margin="10,6,0,0">
+                <RadioButton Content="1つあたり" VerticalAlignment="Center" MinWidth="80"
                            IsChecked="{Binding IsSaveSizeOneWidth}"/>
                 <nup:NumericUpDown Name="MyUpDownOneWidth" MyValueChanged="MyUpDownSize_MyValueChanged"
                            MyMinValue="1" MyMaxValue="1200" MyStringFormat="横 00000"
@@ -72,8 +88,8 @@
                            MyValue="{Binding Path=SaveOneWidth}"/>
 
               </StackPanel>
-              <StackPanel Orientation="Horizontal" Margin="15,0,0,0">
-                <RadioButton Content="全体サイズ"  VerticalAlignment="Center" MinWidth="70"
+              <StackPanel Orientation="Horizontal" Margin="10,0,0,0">
+                <RadioButton Content="全体サイズ"  VerticalAlignment="Center" MinWidth="80"
                            IsChecked="{Binding IsSaveSizeOneWidth, Converter={StaticResource bool}}"/>
                 <nup:NumericUpDown Name="MyUpDownWidth" MyValueChanged="MyUpDownSize_MyValueChanged"
                            MyMinValue="1" MyMaxValue="10240" MyStringFormat="横 00000"
@@ -84,6 +100,7 @@
                            MySmallChange="1" MyLargeChange="40" MinWidth="70"
                            MyValue="{Binding Path=SaveHeight}"/>
               </StackPanel>
+              <RadioButton Content="すべての画像を左上画像のサイズにして連結" IsChecked="{Binding Path=null}" IsEnabled="False"/>
             </StackPanel>
           </GroupBox>
         </StackPanel>
@@ -92,7 +109,8 @@
       <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
         <Canvas x:Name="MyCanvas" Margin="10"
                 HorizontalAlignment="Left" VerticalAlignment="Top">
-          <Rectangle x:Name="MyRectangle" Stroke="Turquoise" StrokeThickness="2">
+          <Rectangle x:Name="MyRectangle" Stroke="Cyan" StrokeThickness="5"
+                     Opacity="0.7">
             <Rectangle.Resources>
               <local:MyConverterRectangleSize x:Key="Size"/>
             </Rectangle.Resources>

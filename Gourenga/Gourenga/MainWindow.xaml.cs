@@ -653,7 +653,7 @@ namespace Gourenga
                 saveImageCount = MyThumbs.Count;
                 saveRows = (int)Math.Ceiling((double)MyThumbs.Count / MyData.Col);
                 if (MyData.Col > MyThumbs.Count) saveCols = MyThumbs.Count;
-                
+
             }
 
             List<Rect> drawRects = new();
@@ -962,6 +962,19 @@ namespace Gourenga
             }
         }
 
+        //全削除
+        private void RemoveAllThumbs()
+        {
+            if (MyThumbs.Count == 0) return;
+            foreach (var item in MyThumbs)
+            {
+                MyCanvas.Children.Remove(item);
+            }
+            MyThumbs.Clear();            
+            MyLocate.Clear();
+            SetMyCanvasSize();
+            MyActiveThumb = null;
+        }
 
         #region ショートカットキー
 
@@ -1043,7 +1056,7 @@ namespace Gourenga
             var data = MyData;
             var size = MyData.Size;
             var row = MyData.Row;
-            MyThumbs[0].MyStrokeRectangle.Visibility = Visibility.Visible;
+            //MyThumbs[0].MyStrokeRectangle.Visibility = Visibility.Visible;
 
         }
 
@@ -1058,6 +1071,38 @@ namespace Gourenga
             RemoveThumb(MyActiveThumb);
         }
 
+        private void MyButtonRemoveArea_Click(object sender, RoutedEventArgs e)
+        {
+            List<ImageThumb> list = new();
+            int row = MyData.Row;
+            int col = MyData.Col;
+            //連結範囲外に画像がある場合
+            if (MyThumbs.Count > row * col)
+            {
+                for (int y = 0; y < row; y++)
+                {
+                    for (int x = 0; x < col; x++)
+                    {
+                        int i = y * col + x;                        
+                        list.Add(MyThumbs[i]);
+                    }
+                }
+                foreach (var item in list)
+                {
+                    RemoveThumb(item);
+                }
+            }
+            //全画像が連結範囲内の場合は全部削除すればいい
+            else
+            {
+                RemoveAllThumbs();
+            }
+        }
+
+        private void MyButtonClear_Click(object sender, RoutedEventArgs e)
+        {
+            RemoveAllThumbs();
+        }
         private void MyUpDownCol_MyValueChanged(object sender, ControlLibraryCore20200620.MyValuechangedEventArgs e)
         {
             ChangeLocate();
@@ -1085,7 +1130,7 @@ namespace Gourenga
             ToClipboard();
         }
 
-        
+
         //クリップボードから追加
         private void MyButtonFromClipboard_Click(object sender, RoutedEventArgs e)
         {
