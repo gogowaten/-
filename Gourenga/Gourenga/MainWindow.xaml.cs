@@ -645,14 +645,15 @@ namespace Gourenga
         {
             //保存対象画像数と横に並べる個数
             int saveImageCount = MyData.Row * MyData.Col;
-            //int saveRows = MyData.Row;
+            int saveRows = MyData.Row;
             int saveCols = MyData.Col;
-            //縦*横よりThumb数が少なければ枠を縮める必要がある
+            //連結範囲のマス数よりよりThumb数が少なければ枠を縮める必要がある
             if (MyData.Row * MyData.Col > MyThumbs.Count)
             {
                 saveImageCount = MyThumbs.Count;
-                saveCols = (int)Math.Ceiling((double)MyThumbs.Count / MyData.Row);
-                //saveRows = (int)Math.Ceiling((double)MyThumbs.Count / MyData.Col);
+                saveRows = (int)Math.Ceiling((double)MyThumbs.Count / MyData.Col);
+                if (MyData.Col > MyThumbs.Count) saveCols = MyThumbs.Count;
+                
             }
 
             List<Rect> drawRects = new();
@@ -663,7 +664,7 @@ namespace Gourenga
 
             double yKijun = 0;
             List<Rect> tempRect = new();
-            for (int iRow = 0; iRow < MyData.Row; iRow++)
+            for (int iRow = 0; iRow < saveRows; iRow++)
             {
                 double maxH = 0;
                 tempRect.Clear();
@@ -873,6 +874,57 @@ namespace Gourenga
             return data;
         }
 
+        //        クリップボードに複数の形式のデータをコピーする - .NET Tips(VB.NET, C#...)
+        //https://dobon.net/vb/dotnet/system/clipboardmultidata.html
+
+        /// <summary>
+        /// BitmapSourceをPNG形式に変換したものと、そのままの形式の両方をクリップボードにコピーする
+        /// </summary>
+        /// <param name="source"></param>
+        private void ClipboadSetImageWithPng(BitmapSource source)
+        {
+            //DataObjectに入れたいデータを入れて、それをクリップボードにセットする
+            DataObject data = new();
+
+            //BitmapSource形式そのままでセット
+            data.SetData(typeof(BitmapSource), source);
+
+            //PNG形式にエンコードしたものをMemoryStreamして、それをセット
+            //画像をPNGにエンコード
+            PngBitmapEncoder pngEnc = new();
+            pngEnc.Frames.Add(BitmapFrame.Create(source));
+            //エンコードした画像をMemoryStreamにSava
+            using var ms = new System.IO.MemoryStream();
+            pngEnc.Save(ms);
+            data.SetData("PNG", ms);
+
+            //クリップボードにセット
+            Clipboard.SetDataObject(data, true);
+
+        }
+
+        //クリップボードにコピー
+        private void ToClipboard()
+        {
+            if (MyThumbs.Count <= 0) return;
+            BitmapSource bmp = MakeSaveBitmap();
+            ClipboadSetImageWithPng(bmp);
+        }
+        //クリップボードから追加
+        private void AddFromClipboardImage()
+        {
+            BitmapSource bmp = Clipboard.GetImage();
+            if (bmp != null)
+            {
+                AddImageThumb(MakeImage(bmp));
+                ChangeLocate();
+            }
+            else
+            {
+                MessageBox.Show($"クリップボードに画像はなかった");
+                return;
+            }
+        }
 
         #endregion 保存
 
@@ -943,6 +995,12 @@ namespace Gourenga
                             if (MyThumbs.Count <= 0) return;
                             SaveImage();
                             break;
+                        case Key.C:
+                            ToClipboard();
+                            break;
+                        case Key.V:
+                            AddFromClipboardImage();
+                            break;
                         default:
                             break;
                     }
@@ -985,7 +1043,7 @@ namespace Gourenga
             var data = MyData;
             var size = MyData.Size;
             var row = MyData.Row;
-            //MyThumbs[0].MyStrokeRectangle.Visibility = Visibility.Visible;
+            MyThumbs[0].MyStrokeRectangle.Visibility = Visibility.Visible;
 
         }
 
@@ -1021,11 +1079,22 @@ namespace Gourenga
             ChangeLocate();
         }
 
+        //クリップボードへコピー
+        private void MyButtonToClipboard_Click(object sender, RoutedEventArgs e)
+        {
+            ToClipboard();
+        }
+
+        
+        //クリップボードから追加
+        private void MyButtonFromClipboard_Click(object sender, RoutedEventArgs e)
+        {
+            AddFromClipboardImage();
+        }
+
 
 
         #endregion クリックとかのイベント関連
-
-
 
     }
 

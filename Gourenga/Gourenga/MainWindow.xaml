@@ -26,6 +26,8 @@
         <Button x:Name="MyButtonTest" Content="test" Click="MyButtonTest_Click" Visibility="Collapsed"/>
         <Button x:Name="MyButtonSave" Content="保存" Click="MyButtonSave_Click"/>
         <Button x:Name="MyButtonRemove" Content="削除" Click="MyButtonRemove_Click"/>
+        <Button x:Name="MyButtonToClipboard" Content="コピー" Click="MyButtonToClipboard_Click"/>
+        <Button x:Name="MyButtonFromClipboard" Content="貼り付け" Click="MyButtonFromClipboard_Click"/>
       </Menu>
 
       <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
