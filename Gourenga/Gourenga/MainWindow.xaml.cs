@@ -152,6 +152,8 @@ namespace Gourenga
             LastDirectory = System.IO.Path.GetDirectoryName(paths[0]);
             LastFileName = System.IO.Path.GetFileNameWithoutExtension(paths[0]);
             SetLastExtentionIndex(paths[0]);
+
+
         }
 
         //ファイルドロップされたパスから拡張子取得して決められたIndexを記録
@@ -219,7 +221,7 @@ namespace Gourenga
             return img;
         }
 
-        //ImageThumb作成
+        //ImageThumb作成してリストとCanvasに追加
         private void AddImageThumb(Image img)
         {
             if (img == null) return;
@@ -232,6 +234,9 @@ namespace Gourenga
 
             MyCanvas.Children.Add(thumb);
             MyThumbs.Add(thumb);
+
+            //ステータスバーの表示更新
+            ChangedSaveImageSize();
 
             //マウスドラッグ移動
             //開始時
@@ -258,6 +263,8 @@ namespace Gourenga
                 Panel.SetZIndex(thumb, index);
                 Canvas.SetLeft(thumb, MyLocate[index].X);
                 Canvas.SetTop(thumb, MyLocate[index].Y);
+                //ステータスバーの表示更新
+                ChangedSaveImageSize();
             };
 
         }
@@ -443,78 +450,7 @@ namespace Gourenga
         //左上から右下へ並べる
         //アスペクト比は元画像から変更しない、サイズは横幅を基準に縦幅を変更
         //行の高さはその行の最大縦幅にする(上下のムダな領域を消す)
-        private List<Rect> MakeRects()
-        {
-            List<Rect> drawRects = new();
-            //横に並べる個数
-            int MasuYoko = MyData.Col;
 
-            int saveImageCount = MyData.Row * MyData.Col;
-            if (saveImageCount > MyThumbs.Count) saveImageCount = MyThumbs.Count;
-
-            //サイズとX座標
-            //指定横幅に縮小、アスペクト比は保持
-            for (int i = 0; i < saveImageCount; i++)
-            {
-                //縮小サイズ決定、指定サイズの正方形に収まるようにアスペクト比保持で縮小
-                //縦横それぞれの縮小率計算して小さい方に合わせる
-                //拡大はしないので縮小率が1以上なら1に抑える
-                BitmapSource bmp = MyThumbs[i].MyImage.Source as BitmapSource;
-                double w = bmp.PixelWidth;
-                double h = bmp.PixelHeight;
-                double widthRatio = MyData.Size / w;
-                double heightRatio = MyData.Size / h;
-                double ratio = Math.Min(widthRatio, heightRatio);
-                if (ratio > 1) ratio = 1;
-                w *= ratio;
-                h *= ratio;
-
-                //X座標、中央揃え
-                double x = (i % MasuYoko) * MyData.Size;
-                x = x + (MyData.Size - w) / 2;
-
-                //Y座標は後で計算
-                drawRects.Add(new(x, 0, w, h));
-            }
-
-            //Y座標計算
-            //Y座標はその行にある画像の中で最大の高さを求めて、中央揃えのY座標を計算
-            //行ごとに計算する必要がある
-
-            //今の行の基準Y座標、次の行へは今の行の高さを加算していく
-            double kijun = 0;
-            int count = 0;
-            while (count < saveImageCount)
-            {
-                int end = count + MasuYoko;
-                if (end > saveImageCount) end = saveImageCount;
-                //Y座標計算
-                kijun += SubFunc(count, end, kijun);
-                //横に並べる個数が3なら0 3 6…
-                count += MasuYoko;
-            }
-
-            //Y座標計算
-            //開始と終了Index指定、基準値
-            double SubFunc(int begin, int end, double kijun)
-            {
-                //行の高さを求める(最大の画像が収まる)
-                double max = 0;
-                for (int i = begin; i < end; i++)
-                {
-                    if (drawRects[i].Height > max) max = drawRects[i].Height;
-                }
-                //Y座標 = 基準値 + (行の高さ - 画像の高さ) / 2
-                for (int i = begin; i < end; i++)
-                {
-                    Rect temp = drawRects[i];
-                    temp.Y = kijun + (max - drawRects[i].Height) / 2;
-                    drawRects[i] = temp;
-                }
-                return max;
-            }
-            return drawRects;
-        }
 
         //指定画像の縮小率を計算
         private double GetScaleRatio(double w, double h, double size)
@@ -528,59 +464,7 @@ namespace Gourenga
             if (ratio > 1) ratio = 1;
             return ratio;
         }
-        private List<Rect> MakeRectsTate()
-        {
-            //保存対象画像数と横に並べる個数
-            int saveImageCount = MyData.Row * MyData.Col;
-            int saveCols = MyData.Col;
-            if (saveImageCount > MyThumbs.Count)
-            {
-                saveImageCount = MyThumbs.Count;
-                saveCols = (int)Math.Ceiling((double)MyThumbs.Count / MyData.Row);
-            }
 
-            List<Rect> drawRects = new();
-
-            //サイズとX座標
-            //指定横幅に縮小、アスペクト比は保持
-            double yKijun = 0;
-            double maxHeight = 0;
-
-            for (int i = 0; i < MyData.Row; i++)
-            {
-                List<Rect> tempRect = new();
-                for (int j = 0; j < saveCols; j++)
-                {
-                    int index = i + j * MyData.Row;
-                    if (index > saveImageCount - 1) break;
-
-                    //縮小後のサイズを計算
-                    double w = MyThumbs[index].MyBitmapSource.PixelWidth;
-                    double h = MyThumbs[index].MyBitmapSource.PixelHeight;
-                    double ratio = GetScaleRatio(w, h, MyData.Size);
-                    w *= ratio;
-                    h *= ratio;
-                    //この行の高さの最大値記録
-                    if (h > maxHeight) maxHeight = h;
-                    //X座標、中央揃え
-                    double xx = (j % MyData.Col) * MyData.Size;
-                    xx += (MyData.Size - w) / 2;
-                    //Rect作成、Y座標は後で計算するので0にしておく
-                    tempRect.Add(new(xx, 0, w, h));
-                }
-                //Y座標
-                for (int j = 0; j < tempRect.Count; j++)
-                {
-                    Rect r = tempRect[j];
-                    double y = yKijun + (maxHeight - r.Height) / 2;
-                    drawRects.Add(new(r.X, y, r.Width, r.Height));
-                }
-                yKijun += maxHeight;
-            }
-
-
-            return drawRects;
-        }
 
         //指定画像の縮小率を計算
         private double GetScaleRatio(double sizeW, double sizeH, double bmpW, double bmpH)
@@ -596,33 +480,24 @@ namespace Gourenga
         }
 
         //保存サイズ決め打ちの場合
-        private List<Rect> MakeRects2()
+        private List<Rect> MakeRectsForOverallType()
         {
-            //保存対象画像数と横に並べる個数
-            int saveImageCount = MyData.Row * MyData.Col;
-            int saveRows = MyData.Row;
-            int saveCols = MyData.Col;
-            //縦*横よりThumb数が少なければ枠を縮める必要がある
-            if (MyData.Row * MyData.Col > MyThumbs.Count)
-            {
-                saveImageCount = MyThumbs.Count;
-                saveCols = (int)Math.Ceiling((double)MyThumbs.Count / MyData.Row);
-                saveRows = (int)Math.Ceiling((double)MyThumbs.Count / MyData.Col);
-            }
+            //保存対象画像数と実際の縦横個数を取得
+            (int imageCount, int areaRows, int areaCols) = GetMakeRectParam();
 
             List<Rect> drawRects = new();
 
             //サイズとX座標
             //指定横幅に縮小、アスペクト比は保持
-            double pieceW = MyData.SaveWidth / saveCols;
-            double pieceH = MyData.SaveHeight / saveRows;
+            double pieceW = MyData.SaveWidth / areaCols;
+            double pieceH = MyData.SaveHeight / areaRows;
 
             for (int iRow = 0; iRow < MyData.Row; iRow++)
             {
-                for (int iCol = 0; iCol < saveCols; iCol++)
+                for (int iCol = 0; iCol < areaCols; iCol++)
                 {
                     int index = iRow * MyData.Col + iCol;
-                    if (saveImageCount <= index) break;
+                    if (imageCount <= index) break;
 
                     double w = MyThumbs[index].MyBitmapSource.PixelWidth;
                     double h = MyThumbs[index].MyBitmapSource.PixelHeight;
@@ -640,41 +515,68 @@ namespace Gourenga
             return drawRects;
         }
 
-        //保存サイズは1画像の横幅を基準にする場合
-        private List<Rect> MakeRects3()
+        //
+        /// <summary>
+        /// Rect作成に必要な要素を返す
+        /// </summary>
+        /// <returns></returns>
+        private (int imageCount, int areaRows, int areaCols) GetMakeRectParam()
         {
+            if (MyData == null)
+            {
+                return (0, 0, 0);
+            }
             //保存対象画像数と横に並べる個数
-            int saveImageCount = MyData.Row * MyData.Col;
-            int saveRows = MyData.Row;
-            int saveCols = MyData.Col;
+            int imageCount = MyData.Row * MyData.Col;
+            int areaRows = MyData.Row;
+            int areaCols = MyData.Col;
             //連結範囲のマス数よりよりThumb数が少なければ枠を縮める必要がある
             if (MyData.Row * MyData.Col > MyThumbs.Count)
             {
-                saveImageCount = MyThumbs.Count;
-                saveRows = (int)Math.Ceiling((double)MyThumbs.Count / MyData.Col);
-                if (MyData.Col > MyThumbs.Count) saveCols = MyThumbs.Count;
-
+                imageCount = MyThumbs.Count;
+                areaRows = (int)Math.Ceiling((double)MyThumbs.Count / MyData.Col);
+                if (MyData.Col > MyThumbs.Count) areaCols = MyThumbs.Count;
             }
+            return (imageCount, areaRows, areaCols);
+        }
+
+        //保存サイズは1画像の横幅を基準にする場合
+        private List<Rect> MakeRectsForWidthType()
+        {
+            //保存対象画像数と実際の縦横個数を取得
+            (int imageCount, int areaRows, int areaCols) = GetMakeRectParam();
 
             List<Rect> drawRects = new();
 
             //サイズとX座標
             //指定横幅に縮小、アスペクト比は保持
             double pieceW = MyData.SaveOneWidth;
+            switch (MyData.SaveScaleSizeType)
+            {
+                case SaveScaleSizeType.OneWidth:
+                    pieceW = MyData.SaveOneWidth;
+                    break;
+                case SaveScaleSizeType.MatchTopLeftImage:
+                    pieceW = MyThumbs[0].MyBitmapSource.PixelWidth;
+                    break;
+                default:
+                    break;
+            }
 
             double yKijun = 0;
             List<Rect> tempRect = new();
-            for (int iRow = 0; iRow < saveRows; iRow++)
+            for (int iRow = 0; iRow < areaRows; iRow++)
             {
                 double maxH = 0;
                 tempRect.Clear();
-                for (int iCol = 0; iCol < saveCols; iCol++)
+                for (int iCol = 0; iCol < areaCols; iCol++)
                 {
                     int index = iRow * MyData.Col + iCol;
-                    if (saveImageCount <= index) break;
+                    if (imageCount <= index) break;
 
                     double w = MyThumbs[index].MyBitmapSource.PixelWidth;
                     double h = MyThumbs[index].MyBitmapSource.PixelHeight;
+                    //縮尺取得
                     double ratio = GetScaleRatio(w, h, pieceW);
                     w *= ratio;
                     h *= ratio;
@@ -695,6 +597,7 @@ namespace Gourenga
 
             return drawRects;
         }
+
 
 
         //日時をstringで取得
@@ -723,23 +626,15 @@ namespace Gourenga
         //RenderTargetBitmap作成
         private BitmapSource MakeSaveBitmap()
         {
-            //描画する座標とサイズを取得
-            //List<Rect> drawRects = MakeRects2();
-            //List<Rect> drawRects = MakeRectsTate();
-            //List<Rect> drawRects = MakeRects();
-            List<Rect> drawRects;
-            if (MyData.IsSaveSizeOneWidth)
+            List<Rect> drawRects = MyData.SaveScaleSizeType switch
             {
-                drawRects = MakeRects3();
-            }
-            else
-            {
-                drawRects = MakeRects2();
-            }
+                SaveScaleSizeType.OneWidth => MakeRectsForWidthType(),
+                SaveScaleSizeType.Overall => MakeRectsForOverallType(),
+                SaveScaleSizeType.MatchTopLeftImage => MakeRectsForWidthType(),
+                _ => MakeRectsForOverallType(),
+            };
 
             DrawingVisual dv = new();
-
-
             using (DrawingContext dc = dv.RenderOpen())
             {
                 for (int i = 0; i < drawRects.Count; i++)
@@ -749,9 +644,9 @@ namespace Gourenga
                 }
             }
 
-
-
-            if (MyData.IsSaveSizeOneWidth)
+            RenderTargetBitmap renderBitmap;
+            if (MyData.SaveScaleSizeType == SaveScaleSizeType.OneWidth ||
+                MyData.SaveScaleSizeType == SaveScaleSizeType.MatchTopLeftImage)
             {
                 //最終的な全体画像サイズ計算、RectのUnionを使う
                 Rect dRect = new();
@@ -761,19 +656,21 @@ namespace Gourenga
                 }
                 int width = (int)dRect.Width;
                 int height = (int)dRect.Height;
-                RenderTargetBitmap render = new(width, height, 96, 96, PixelFormats.Pbgra32);
-                render.Render(dv);
-                return render;
+                renderBitmap = new(width, height, 96, 96, PixelFormats.Pbgra32);
+                renderBitmap.Render(dv);
+
+            }
+            else if (MyData.SaveScaleSizeType == SaveScaleSizeType.Overall)
+            {
+                //決め打ちサイズ
+                renderBitmap = new(MyData.SaveWidth, MyData.SaveHeight, 96, 96, PixelFormats.Pbgra32);
+                renderBitmap.Render(dv);
             }
             else
             {
-                //決め打ちサイズ
-                RenderTargetBitmap render = new(MyData.SaveWidth, MyData.SaveHeight, 96, 96, PixelFormats.Pbgra32);
-                render.Render(dv);
-                return render;
-
+                renderBitmap = null;
             }
-
+            return renderBitmap;
         }
 
 
@@ -792,34 +689,7 @@ namespace Gourenga
 
             if (saveFileDialog.ShowDialog() == true)
             {
-                BitmapEncoder encoder = null;
-                switch (saveFileDialog.FilterIndex)
-                {
-                    case 1:
-                        encoder = new PngBitmapEncoder();
-                        break;
-                    case 2:
-                        encoder = new JpegBitmapEncoder();
-                        break;
-                    case 3:
-                        encoder = new BmpBitmapEncoder();
-                        break;
-                    case 4:
-                        encoder = new GifBitmapEncoder();
-                        break;
-                    case 5:
-                        encoder = new TiffBitmapEncoder();
-                        break;
-                    case 6:
-                        //wmpはロスレス指定、じゃないと1bppで保存時に画像が崩れるしファイルサイズも大きくなる
-                        var wmp = new WmpBitmapEncoder();
-                        wmp.ImageQualityLevel = 1.0f;
-                        encoder = wmp;
-                        break;
-                    default:
-                        break;
-                }
-
+                BitmapEncoder encoder = MakeBitmapEncoder(saveFileDialog.FilterIndex);
                 encoder.Frames.Add(BitmapFrame.Create(MakeSaveBitmap(), null, MakeMetadata(encoder), null));
                 using (var fs = new System.IO.FileStream(
                     saveFileDialog.FileName,
@@ -831,11 +701,45 @@ namespace Gourenga
                     //保存フォルダのパスと拡張子を記録
                     LastDirectory = System.IO.Path.GetDirectoryName(saveFileDialog.FileName);
                     LastFileExtensionIndex = saveFileDialog.FilterIndex;
+                    if (MyData.IsSavedBitmapRemove)
+                    {
+                        RemoveAreaThumb();
+                    }
                 }
 
             }
         }
-
+        private BitmapEncoder MakeBitmapEncoder(int filterIndex)
+        {
+            BitmapEncoder encoder = null;
+            switch (filterIndex)
+            {
+                case 1:
+                    encoder = new PngBitmapEncoder();
+                    break;
+                case 2:
+                    encoder = new JpegBitmapEncoder();
+                    break;
+                case 3:
+                    encoder = new BmpBitmapEncoder();
+                    break;
+                case 4:
+                    encoder = new GifBitmapEncoder();
+                    break;
+                case 5:
+                    encoder = new TiffBitmapEncoder();
+                    break;
+                case 6:
+                    //wmpはロスレス指定、じゃないと1bppで保存時に画像が崩れるしファイルサイズも大きくなる
+                    var wmp = new WmpBitmapEncoder();
+                    wmp.ImageQualityLevel = 1.0f;
+                    encoder = wmp;
+                    break;
+                default:
+                    break;
+            }
+            return encoder;
+        }
 
         //メタデータ作成
         private BitmapMetadata MakeMetadata(BitmapEncoder encoder)
@@ -928,7 +832,7 @@ namespace Gourenga
 
         #endregion 保存
 
-
+        #region 削除
 
         //削除時
         //管理用リストから削除
@@ -960,6 +864,8 @@ namespace Gourenga
             {
                 MyActiveThumb = MyThumbs[i];
             }
+            //ステータスバーの表示更新
+            ChangedSaveImageSize();
         }
 
         //全削除
@@ -970,11 +876,39 @@ namespace Gourenga
             {
                 MyCanvas.Children.Remove(item);
             }
-            MyThumbs.Clear();            
+            MyThumbs.Clear();
             MyLocate.Clear();
             SetMyCanvasSize();
             MyActiveThumb = null;
+            //ステータスバーの表示更新
+            ChangedSaveImageSize();
         }
+
+        //連結範囲内画像削除
+        private void RemoveAreaThumb()
+        {
+            List<ImageThumb> list = new();
+            int row = MyData.Row;
+            int col = MyData.Col;
+            //連結範囲外に画像がある場合
+            if (MyThumbs.Count > row * col)
+            {
+                for (int i = 0; i < row * col; i++)
+                {
+                    list.Add(MyThumbs[i]);
+                }
+                foreach (var item in list)
+                {
+                    RemoveThumb(item);
+                }
+            }
+            //全画像が連結範囲内の場合は全部削除
+            else
+            {
+                RemoveAllThumbs();
+            }
+        }
+        #endregion 削除
 
         #region ショートカットキー
 
@@ -1048,8 +982,37 @@ namespace Gourenga
 
         #endregion ショートカットキー
 
+        #region ステータスバーの表示更新
 
-        #region クリックとかのイベント関連
+        //保存サイズの再計算
+        private void ChangedSaveImageSize()
+        {
+            if (MyData == null) return;
+            if (MyThumbs.Count == 0) return;
+            var (imageCount, areaRows, areaCols) = GetMakeRectParam();
+            int w = 0, h = 0;
+            switch (MyData.SaveScaleSizeType)
+            {
+                case SaveScaleSizeType.OneWidth:
+                    w = MyData.SaveOneWidth * areaCols;
+                    break;
+                case SaveScaleSizeType.Overall:
+                    w = MyData.SaveWidth;
+                    h = MyData.SaveHeight;
+                    break;
+                case SaveScaleSizeType.MatchTopLeftImage:
+                    w = MyThumbs[0].MyBitmapSource.PixelWidth * areaCols;
+                    h = MyThumbs[0].MyBitmapSource.PixelHeight * areaRows;
+                    break;
+                default:
+                    break;
+            }
+            string strH = h == 0 ? "可変" : h.ToString();
+
+            MyStatusItemSaveImageSize.Content = $"保存サイズ(横{w}, 縦{strH})";
+        }
+
+        #endregion ステータスバーの表示更新
 
         private void MyButtonTest_Click(object sender, RoutedEventArgs e)
         {
@@ -1059,6 +1022,9 @@ namespace Gourenga
             //MyThumbs[0].MyStrokeRectangle.Visibility = Visibility.Visible;
 
         }
+
+
+        #region クリックとかのイベント関連
 
         private void MyButtonSave_Click(object sender, RoutedEventArgs e)
         {
@@ -1073,30 +1039,7 @@ namespace Gourenga
 
         private void MyButtonRemoveArea_Click(object sender, RoutedEventArgs e)
         {
-            List<ImageThumb> list = new();
-            int row = MyData.Row;
-            int col = MyData.Col;
-            //連結範囲外に画像がある場合
-            if (MyThumbs.Count > row * col)
-            {
-                for (int y = 0; y < row; y++)
-                {
-                    for (int x = 0; x < col; x++)
-                    {
-                        int i = y * col + x;                        
-                        list.Add(MyThumbs[i]);
-                    }
-                }
-                foreach (var item in list)
-                {
-                    RemoveThumb(item);
-                }
-            }
-            //全画像が連結範囲内の場合は全部削除すればいい
-            else
-            {
-                RemoveAllThumbs();
-            }
+            RemoveAreaThumb();
         }
 
         private void MyButtonClear_Click(object sender, RoutedEventArgs e)
@@ -1106,23 +1049,26 @@ namespace Gourenga
         private void MyUpDownCol_MyValueChanged(object sender, ControlLibraryCore20200620.MyValuechangedEventArgs e)
         {
             ChangeLocate();
+            ChangedSaveImageSize();
         }
 
         private void MyUpDownRow_MyValueChanged(object sender, ControlLibraryCore20200620.MyValuechangedEventArgs e)
         {
             ChangeLocate();
+            ChangedSaveImageSize();
         }
 
         private void MyUpDownSize_MyValueChanged(object sender, ControlLibraryCore20200620.MyValuechangedEventArgs e)
         {
             ChangeLocate();
             MyStatusItem1.Content = MyUpDownSize.MyValue.ToString();
+            ChangedSaveImageSize();
         }
 
-        private void RadioButtonSort_Click(object sender, RoutedEventArgs e)
-        {
-            ChangeLocate();
-        }
+        //private void RadioButtonSort_Click(object sender, RoutedEventArgs e)
+        //{
+        //    ChangeLocate();
+        //}
 
         //クリップボードへコピー
         private void MyButtonToClipboard_Click(object sender, RoutedEventArgs e)
@@ -1140,6 +1086,11 @@ namespace Gourenga
 
 
         #endregion クリックとかのイベント関連
+
+        private void RadioButtonSaveSize_Click(object sender, RoutedEventArgs e)
+        {
+            ChangedSaveImageSize();
+        }
 
     }
 
@@ -1161,10 +1112,15 @@ namespace Gourenga
 
         //ドラッグ移動での入れ替えモード、trueで入れ替え、falseは挿入
         public bool IsSwap { get; set; } = true;
-        //画像の並び順、trueで横、falseは縦
-        //public bool IsHorizontalSort { get; set; } = true;
-        //保存サイズの指定方法、trueで1画像の幅基準、falseは保存画像縦横指定
-        public bool IsSaveSizeOneWidth { get; set; } = true;
+
+
+        public bool IsSavedBitmapRemove { get; set; } = false;
+
+        //保存サイズの指定方法
+        public SaveScaleSizeType SaveScaleSizeType { get; set; } = SaveScaleSizeType.OneWidth;
+
+
+
 
         //これはMainWindowの方で管理したほうが良かったかも
         public ObservableCollection<ImageThumb> MyThumbs { get; set; } = new();
@@ -1208,5 +1164,50 @@ namespace Gourenga
         }
     }
 
+    //    C#のWPFでRadioButtonのIsCheckedに列挙型をバインドする - Ararami Studio
+    //https://araramistudio.jimdo.com/2016/12/27/wpf%E3%81%A7radiobutton%E3%81%AEischecked%E3%81%AB%E5%88%97%E6%8C%99%E5%9E%8B%E3%82%92%E3%83%90%E3%82%A4%E3%83%B3%E3%83%89%E3%81%99%E3%82%8B/
+
+    public class MyConverterSaveScaleType : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            var str = parameter as string;
+            var p = Enum.Parse(typeof(SaveScaleSizeType), str);
+            var v = (SaveScaleSizeType)value;
+            bool b = p.Equals(v);
+            return b;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            var str = parameter as string;
+            if (true.Equals(value))
+                return Enum.Parse(targetType, str);
+            else
+                return DependencyProperty.UnsetValue;
+        }
+    }
     #endregion コンバーター
+
+
+    #region 列挙型
+
+    //保存時の縮尺指定
+    public enum SaveScaleSizeType
+    {
+        OneWidth,//ひとつあたりの幅
+        Overall,//全体
+        MatchTopLeftImage,//先頭画像横幅にあわせる
+    }
+
+    #endregion 列挙型
+
+
+
+
+
+
+
+
+
 }

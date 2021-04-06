@@ -45,7 +45,7 @@
           <TextBlock Text="text"/>
         </StackPanel>
       </Expander>-->
-      
+
       <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
         <StackPanel Margin="10">
           <GroupBox Header="連結範囲">
@@ -62,6 +62,7 @@
                            MyMinValue="40" MyMaxValue="960" MyStringFormat="1表示サイズ 000"
                            MySmallChange="40" MyLargeChange="40" MinWidth="100" MyTextAlignment="Center"
                            MyValue="{Binding Path=Size}" Margin="0,4,0,0"/>
+          <CheckBox Content="保存した画像は削除" IsChecked="{Binding Path=IsSavedBitmapRemove}"/>
         </StackPanel>
 
         <GroupBox Header="入替モード" Margin="10">
@@ -79,9 +80,13 @@
           </StackPanel.Resources>
           <GroupBox Header="保存サイズ指定">
             <StackPanel Orientation="Vertical">
+              <StackPanel.Resources>
+                <local:MyConverterSaveScaleType x:Key="ConvSaveType"/>
+              </StackPanel.Resources>
               <StackPanel Orientation="Horizontal" Margin="10,6,0,0">
-                <RadioButton Content="1つあたり" VerticalAlignment="Center" MinWidth="80"
-                           IsChecked="{Binding IsSaveSizeOneWidth}"/>
+                <RadioButton Content="1画像幅" VerticalAlignment="Center" MinWidth="80"
+                             Click="RadioButtonSaveSize_Click"
+                             IsChecked="{Binding Path=SaveScaleSizeType, Converter={StaticResource ConvSaveType}, ConverterParameter=OneWidth}"/>
                 <nup:NumericUpDown Name="MyUpDownOneWidth" MyValueChanged="MyUpDownSize_MyValueChanged"
                            MyMinValue="1" MyMaxValue="1200" MyStringFormat="横 00000"
                            MySmallChange="1" MyLargeChange="40" MinWidth="70"
@@ -90,7 +95,8 @@
               </StackPanel>
               <StackPanel Orientation="Horizontal" Margin="10,0,0,0">
                 <RadioButton Content="全体サイズ"  VerticalAlignment="Center" MinWidth="80"
-                           IsChecked="{Binding IsSaveSizeOneWidth, Converter={StaticResource bool}}"/>
+                             Click="RadioButtonSaveSize_Click"
+                             IsChecked="{Binding Path=SaveScaleSizeType, Converter={StaticResource ConvSaveType}, ConverterParameter=Overall}"/>
                 <nup:NumericUpDown Name="MyUpDownWidth" MyValueChanged="MyUpDownSize_MyValueChanged"
                            MyMinValue="1" MyMaxValue="10240" MyStringFormat="横 00000"
                            MySmallChange="1" MyLargeChange="40" MinWidth="70"
@@ -100,9 +106,14 @@
                            MySmallChange="1" MyLargeChange="40" MinWidth="70"
                            MyValue="{Binding Path=SaveHeight}"/>
               </StackPanel>
-              <RadioButton Content="すべての画像を左上画像のサイズにして連結" IsChecked="{Binding Path=null}" IsEnabled="False"/>
+              <StackPanel Orientation="Horizontal" Margin="10,0,0,0">
+              <RadioButton Content="全画像を左上画像の横幅"
+                           Click="RadioButtonSaveSize_Click"
+                           IsChecked="{Binding Path=SaveScaleSizeType, Converter={StaticResource ConvSaveType}, ConverterParameter=MatchTopLeftImage}"/>
+              </StackPanel>
             </StackPanel>
           </GroupBox>
+
         </StackPanel>
 
       </StackPanel>
