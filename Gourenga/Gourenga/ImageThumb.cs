@@ -41,6 +41,9 @@ namespace Gourenga
             MyPanel = (Canvas)template.FindName("panel", this);
             MyPanel.Background = Brushes.Transparent;
 
+            this.SetBinding(WidthProperty, new Binding("Size"));
+            this.SetBinding(HeightProperty, new Binding("Size"));
+
             MyPanel.Children.Add(img);
             MyImage = img;
             MyBitmapSource = img.Source as BitmapSource;

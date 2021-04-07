@@ -6,7 +6,7 @@
         xmlns:nup="clr-namespace:ControlLibraryCore20200620;assembly=ControlLibraryCore20200620"
         xmlns:local="clr-namespace:Gourenga"
         mc:Ignorable="d"
-        Title="MainWindow" Height="451" Width="614"
+        Title="MainWindow" Height="520" Width="614"
         ResizeMode="CanResizeWithGrip"
         AllowDrop="True"
         Drop="Window_Drop"
@@ -62,7 +62,21 @@
                            MyMinValue="40" MyMaxValue="960" MyStringFormat="1表示サイズ 000"
                            MySmallChange="40" MyLargeChange="40" MinWidth="100" MyTextAlignment="Center"
                            MyValue="{Binding Path=Size}" Margin="0,4,0,0"/>
-          <CheckBox Content="保存した画像は削除" IsChecked="{Binding Path=IsSavedBitmapRemove}"/>
+          <GroupBox Header="保存時の動作">
+            <StackPanel>
+              <CheckBox Content="保存した画像は削除" IsChecked="{Binding Path=IsSavedBitmapRemove}"/>
+              <CheckBox Content="画像同士の隙間は白にする" IsChecked="{Binding Path=IsSaveBackgroundWhite}"/>
+              <StackPanel Orientation="Horizontal">
+                <CheckBox x:Name="MyCheckBoxMargin" Content="余白を付ける" VerticalAlignment="Center"
+                      IsChecked="{Binding IsMargin}" Click="MyCheckBoxMargin_Click"/>
+                <nup:NumericUpDown Name="MyUpDownMargin" MyMinValue="0" MyMaxValue="100"
+                               MyStringFormat="000" MyValueChanged="MyUpDownMargin_MyValueChanged"
+                               MyValue="{Binding Margin}"
+                               IsEnabled="{Binding IsMargin}"/>
+              </StackPanel>
+            </StackPanel>
+          </GroupBox>
+          
         </StackPanel>
 
         <GroupBox Header="入替モード" Margin="10">
@@ -107,14 +121,14 @@
                            MyValue="{Binding Path=SaveHeight}"/>
               </StackPanel>
               <StackPanel Orientation="Horizontal" Margin="10,0,0,0">
-              <RadioButton Content="全画像を左上画像の横幅"
+                <RadioButton Content="全画像を左上画像の横幅に合わせる"
                            Click="RadioButtonSaveSize_Click"
                            IsChecked="{Binding Path=SaveScaleSizeType, Converter={StaticResource ConvSaveType}, ConverterParameter=MatchTopLeftImage}"/>
               </StackPanel>
             </StackPanel>
           </GroupBox>
-
         </StackPanel>
+
 
       </StackPanel>
       <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">

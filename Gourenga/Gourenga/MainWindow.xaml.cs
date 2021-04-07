@@ -488,9 +488,9 @@ namespace Gourenga
             List<Rect> drawRects = new();
 
             //サイズとX座標
-            //指定横幅に縮小、アスペクト比は保持
-            double pieceW = MyData.SaveWidth / areaCols;
-            double pieceH = MyData.SaveHeight / areaRows;
+            //各画像の縮小サイズを計算
+            double wOne = MyData.SaveWidth / areaCols;
+            double hOne = MyData.SaveHeight / areaRows;
 
             for (int iRow = 0; iRow < MyData.Row; iRow++)
             {
@@ -501,14 +501,51 @@ namespace Gourenga
 
                     double w = MyThumbs[index].MyBitmapSource.PixelWidth;
                     double h = MyThumbs[index].MyBitmapSource.PixelHeight;
-                    double ratio = GetScaleRatio(pieceW, pieceH, w, h);
+                    double ratio = GetScaleRatio(wOne, hOne, w, h);
                     w *= ratio;
                     h *= ratio;
-                    double x = iCol * pieceW;
-                    x += (pieceW - w) / 2;
-                    double y = iRow * pieceH;
-                    y += (pieceH - h) / 2;
+                    double x = iCol * wOne;
+                    x += (wOne - w) / 2;
+                    double y = iRow * hOne;
+                    y += (hOne - h) / 2;
                     drawRects.Add(new Rect(x, y, w, h));
+                }
+            }
+
+            return drawRects;
+        }
+        //保存サイズ決め打ち + 余白付加の場合
+        private List<Rect> MakeRectsForOverallTypeWithMargin()
+        {
+            //保存対象画像数と実際の縦横個数を取得
+            (int imageCount, int areaRows, int areaCols) = GetMakeRectParam();
+
+            List<Rect> drawRects = new();
+
+            //サイズとX座標
+            //各画像の縮小サイズを計算
+            int margin = MyData.Margin;
+            double wMargin = (areaCols + 1) * margin;
+            double hMargin = (areaRows + 1) * margin;
+            double wOne = (MyData.SaveWidth - wMargin) / areaCols;
+            double hOne = (MyData.SaveHeight - hMargin) / areaRows;
+
+            for (int y = 0; y < MyData.Row; y++)
+            {
+                for (int x = 0; x < areaCols; x++)
+                {
+                    int i = y * MyData.Col + x;
+                    if (imageCount <= i) break;
+                    BitmapSource bmp = MyThumbs[i].MyBitmapSource;
+                    double ratio = GetScaleRatio(wOne, hOne, bmp.PixelWidth, bmp.PixelHeight);
+                    double w = bmp.PixelWidth * ratio;
+                    double h = bmp.PixelHeight * ratio;
+
+                    double xx = margin + (x * (wOne + margin));
+                    xx += (wOne - w) / 2;
+                    double yy = margin + (y * (margin + hOne));
+                    yy += (hOne - h) / 2;
+                    drawRects.Add(new Rect(xx, yy, w, h));
                 }
             }
 
@@ -598,6 +635,58 @@ namespace Gourenga
             return drawRects;
         }
 
+        //保存サイズは1画像の横幅を基準にする場合
+        private List<Rect> MakeRectsForWidthTypeWithMargin()
+        {
+            //保存対象画像数と実際の縦横個数を取得
+            (int imageCount, int areaRows, int areaCols) = GetMakeRectParam();
+
+            List<Rect> drawRects = new();
+
+            //サイズとX座標
+            //指定横幅に縮小、アスペクト比は保持
+            double pieceW = MyData.SaveOneWidth;
+            if (MyData.SaveScaleSizeType == SaveScaleSizeType.MatchTopLeftImage)
+            {
+                pieceW = MyThumbs[0].MyBitmapSource.PixelWidth;
+            }
+
+            double yKijun = 0;
+            int margin = MyData.Margin;
+            List<Rect> tempRect = new();
+            for (int y = 0; y < areaRows; y++)
+            {
+                double maxH = 0;
+                tempRect.Clear();
+                for (int x = 0; x < areaCols; x++)
+                {
+                    int index = y * MyData.Col + x;
+                    if (imageCount <= index) break;
+
+                    double w = MyThumbs[index].MyBitmapSource.PixelWidth;
+                    double h = MyThumbs[index].MyBitmapSource.PixelHeight;
+                    //縮尺取得
+                    double ratio = GetScaleRatio(w, h, pieceW);
+                    w *= ratio;
+                    h *= ratio;
+                    if (h > maxH) maxH = h;
+                    double xx = margin + (x * (pieceW + margin));
+                    xx += (pieceW - w) / 2;
+
+                    tempRect.Add(new Rect(xx, 0, w, h));
+                }
+                for (int i = 0; i < tempRect.Count; i++)
+                {
+                    Rect r = tempRect[i];
+                    double yy = margin + yKijun + (maxH - r.Height) / 2;
+                    drawRects.Add(new Rect(r.X, yy, r.Width, r.Height));
+                }
+                yKijun += maxH + margin;
+            }
+
+            return drawRects;
+        }
+
 
 
         //日時をstringで取得
@@ -626,39 +715,84 @@ namespace Gourenga
         //RenderTargetBitmap作成
         private BitmapSource MakeSaveBitmap()
         {
-            List<Rect> drawRects = MyData.SaveScaleSizeType switch
+            //List<Rect> drawRects = MyData.SaveScaleSizeType switch
+            //{
+            //    SaveScaleSizeType.OneWidth => MakeRectsForWidthType(),
+            //    SaveScaleSizeType.Overall => MakeRectsForOverallType(),
+            //    SaveScaleSizeType.MatchTopLeftImage => MakeRectsForWidthType(),
+            //    _ => MakeRectsForOverallType(),
+            //};
+
+            List<Rect> drawRects;
+            switch (MyData.SaveScaleSizeType, MyData.IsMargin)
             {
-                SaveScaleSizeType.OneWidth => MakeRectsForWidthType(),
-                SaveScaleSizeType.Overall => MakeRectsForOverallType(),
-                SaveScaleSizeType.MatchTopLeftImage => MakeRectsForWidthType(),
-                _ => MakeRectsForOverallType(),
-            };
+                case (SaveScaleSizeType.Overall, true):
+                    drawRects = MakeRectsForOverallTypeWithMargin();
+                    break;
+
+                case (SaveScaleSizeType.Overall, false):
+                    drawRects = MakeRectsForOverallType();
+                    break;
+
+                case (SaveScaleSizeType.OneWidth, true):
+                    drawRects = MakeRectsForWidthTypeWithMargin();
+                    break;
+
+                case (SaveScaleSizeType.OneWidth, false):
+                    drawRects = MakeRectsForWidthType();
+                    break;
+
+                case (SaveScaleSizeType.MatchTopLeftImage, true):
+                    drawRects = MakeRectsForWidthTypeWithMargin();
+                    break;
+
+                case (SaveScaleSizeType.MatchTopLeftImage, false):
+                    drawRects = MakeRectsForWidthType();
+                    break;
+
+                default:
+                    drawRects = MakeRectsForOverallType();
+                    break;
+            }
+            //最終的な全体画像サイズ取得
+            Size renderBimpSize = GetRenderSize(drawRects);
+            if (MyData.SaveScaleSizeType == SaveScaleSizeType.Overall)
+            {
+                renderBimpSize.Width = MyData.SaveWidth;
+                renderBimpSize.Height = MyData.SaveHeight;
+            }
 
             DrawingVisual dv = new();
             using (DrawingContext dc = dv.RenderOpen())
             {
+                //隙間を白で塗る(下地を白で塗りつぶしておく)
+                if (MyData.IsSaveBackgroundWhite || MyData.IsMargin)
+                {
+                    dc.DrawRectangle(
+                        Brushes.White, null,
+                        new Rect(0, 0,
+                        (int)(renderBimpSize.Width + 0.5),
+                        (int)(renderBimpSize.Height + 0.5)));
+                }
+                //各画描画
                 for (int i = 0; i < drawRects.Count; i++)
                 {
                     BitmapSource source = MyThumbs[i].MyBitmapSource;
                     dc.DrawImage(source, drawRects[i]);
                 }
             }
+            //var neko = dv.ContentBounds;
 
+            //Bitmap作成
             RenderTargetBitmap renderBitmap;
             if (MyData.SaveScaleSizeType == SaveScaleSizeType.OneWidth ||
                 MyData.SaveScaleSizeType == SaveScaleSizeType.MatchTopLeftImage)
             {
-                //最終的な全体画像サイズ計算、RectのUnionを使う
-                Rect dRect = new();
-                for (int i = 0; i < drawRects.Count; i++)
-                {
-                    dRect = Rect.Union(dRect, drawRects[i]);
-                }
-                int width = (int)dRect.Width;
-                int height = (int)dRect.Height;
+                //サイズは四捨五入
+                int width = (int)(renderBimpSize.Width + 0.5);
+                int height = (int)(renderBimpSize.Height + 0.5);
                 renderBitmap = new(width, height, 96, 96, PixelFormats.Pbgra32);
                 renderBitmap.Render(dv);
-
             }
             else if (MyData.SaveScaleSizeType == SaveScaleSizeType.Overall)
             {
@@ -672,8 +806,37 @@ namespace Gourenga
             }
             return renderBitmap;
         }
+        //描画サイズ取得
+        //最終的な全体画像サイズ計算、RectのUnionを使う
+        private Size GetRenderSize(List<Rect> drawRects)
+        {
+            Rect dRect = new();
+            for (int i = 0; i < drawRects.Count; i++)
+            {
+                dRect = Rect.Union(dRect, drawRects[i]);
+            }
 
-
+            //横幅は指定サイズ*横個数
+            var temp = GetMakeRectParam();
+            int margin = MyData.Margin;
+            if (MyData.SaveScaleSizeType == SaveScaleSizeType.OneWidth)
+            {
+                dRect.Width = MyData.SaveOneWidth * temp.areaCols;
+                //余白分を足す
+                if (MyData.IsMargin)
+                {
+                    dRect.Width += (temp.areaCols + 1) * margin;
+                    dRect.Height += margin;
+                }
+            }
+            else if (MyData.SaveScaleSizeType == SaveScaleSizeType.MatchTopLeftImage &&
+                MyData.IsMargin)
+            {
+                dRect.Width += margin;
+                dRect.Height += margin;
+            }
+            return dRect.Size;
+        }
         private void SaveImage()
         {
             var saveFileDialog = new Microsoft.Win32.SaveFileDialog();
@@ -778,6 +941,11 @@ namespace Gourenga
             return data;
         }
 
+        #endregion 保存
+
+
+        #region クリップボード
+
         //        クリップボードに複数の形式のデータをコピーする - .NET Tips(VB.NET, C#...)
         //https://dobon.net/vb/dotnet/system/clipboardmultidata.html
 
@@ -817,7 +985,7 @@ namespace Gourenga
         //クリップボードから追加
         private void AddFromClipboardImage()
         {
-            BitmapSource bmp = Clipboard.GetImage();
+            BitmapSource bmp = GetImageFromClipboardWithPNG();// Clipboard.GetImage();
             if (bmp != null)
             {
                 AddImageThumb(MakeImage(bmp));
@@ -830,7 +998,30 @@ namespace Gourenga
             }
         }
 
-        #endregion 保存
+        /// <summary>
+        /// クリップボードからBitmapSourceを取り出して返す、PNG(アルファ値保持)形式に対応
+        /// </summary>
+        /// <returns></returns>
+        private BitmapSource GetImageFromClipboardWithPNG()
+        {
+            BitmapSource source = null;
+            //クリップボードにPNG形式のデータがあったら、それを使ってBitmapFrame作成して返す
+            //なければ普通にClipboardのGetImage、それでもなければnullを返す
+            using var ms = (System.IO.MemoryStream)Clipboard.GetData("PNG");
+            if (ms != null)
+            {
+                //source = BitmapFrame.Create(ms);//これだと取得できない
+                source = BitmapFrame.Create(ms, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+            }
+            else if (Clipboard.ContainsImage())
+            {
+                source = Clipboard.GetImage();
+            }
+            return source;
+        }
+
+        #endregion クリップボード
+
 
         #region 削除
 
@@ -993,16 +1184,28 @@ namespace Gourenga
             int w = 0, h = 0;
             switch (MyData.SaveScaleSizeType)
             {
+                //一つの横幅指定
                 case SaveScaleSizeType.OneWidth:
                     w = MyData.SaveOneWidth * areaCols;
+                    if (MyData.IsMargin)
+                    {
+                        w += (areaCols + 1) * MyData.Margin;
+                    }
                     break;
+                //全体指定
                 case SaveScaleSizeType.Overall:
                     w = MyData.SaveWidth;
                     h = MyData.SaveHeight;
                     break;
+                //左上画像の横幅
                 case SaveScaleSizeType.MatchTopLeftImage:
                     w = MyThumbs[0].MyBitmapSource.PixelWidth * areaCols;
                     h = MyThumbs[0].MyBitmapSource.PixelHeight * areaRows;
+                    if (MyData.IsMargin)
+                    {
+                        w += (areaCols + 1) * MyData.Margin;
+                        h += (areaRows + 1) * MyData.Margin;
+                    }
                     break;
                 default:
                     break;
@@ -1065,11 +1268,6 @@ namespace Gourenga
             ChangedSaveImageSize();
         }
 
-        //private void RadioButtonSort_Click(object sender, RoutedEventArgs e)
-        //{
-        //    ChangeLocate();
-        //}
-
         //クリップボードへコピー
         private void MyButtonToClipboard_Click(object sender, RoutedEventArgs e)
         {
@@ -1083,14 +1281,22 @@ namespace Gourenga
             AddFromClipboardImage();
         }
 
-
-
-        #endregion クリックとかのイベント関連
-
         private void RadioButtonSaveSize_Click(object sender, RoutedEventArgs e)
         {
             ChangedSaveImageSize();
         }
+        private void MyCheckBoxMargin_Click(object sender, RoutedEventArgs e)
+        {
+            ChangedSaveImageSize();
+        }
+        private void MyUpDownMargin_MyValueChanged(object sender, ControlLibraryCore20200620.MyValuechangedEventArgs e)
+        {
+            ChangedSaveImageSize();
+        }
+
+
+
+        #endregion クリックとかのイベント関連
 
     }
 
@@ -1114,12 +1320,16 @@ namespace Gourenga
         public bool IsSwap { get; set; } = true;
 
 
-        public bool IsSavedBitmapRemove { get; set; } = false;
+        public bool IsSavedBitmapRemove { get; set; }
 
         //保存サイズの指定方法
         public SaveScaleSizeType SaveScaleSizeType { get; set; } = SaveScaleSizeType.OneWidth;
-
-
+        //隙間を白で塗る
+        public bool IsSaveBackgroundWhite { get; set; }
+        //余白サイズ
+        public int Margin { get; set; }
+        //余白フラグ
+        public bool IsMargin { get; set; } = false;
 
 
         //これはMainWindowの方で管理したほうが良かったかも
