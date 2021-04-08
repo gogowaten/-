@@ -24,3 +24,5 @@ C:\Users\waten\Source\Repos\gourenga\Gourenga\Gourenga\obj\Release\net5.0-window
 C:\Users\waten\Source\Repos\gourenga\Gourenga\Gourenga\obj\Release\net5.0-windows\ref\Gourenga.dll
 C:\Users\waten\Source\Repos\gourenga\Gourenga\Gourenga\obj\Release\net5.0-windows\Gourenga.pdb
 C:\Users\waten\Source\Repos\gourenga\Gourenga\Gourenga\obj\Release\net5.0-windows\Gourenga.genruntimeconfig.cache
+C:\Users\waten\Source\Repos\gourenga\Gourenga\Gourenga\obj\Release\net5.0-windows\Preview.g.cs
+C:\Users\waten\Source\Repos\gourenga\Gourenga\Gourenga\obj\Release\net5.0-windows\Preview.baml

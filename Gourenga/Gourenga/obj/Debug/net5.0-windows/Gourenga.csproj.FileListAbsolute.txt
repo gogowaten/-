@@ -24,3 +24,5 @@ C:\Users\waten\Source\Repos\gourenga\Gourenga\Gourenga\bin\Debug\net5.0-windows\
 C:\Users\waten\Source\Repos\gourenga\Gourenga\Gourenga\bin\Debug\net5.0-windows\ControlLibraryCore20200620.pdb
 C:\Users\waten\Source\Repos\gourenga\Gourenga\Gourenga\obj\Debug\net5.0-windows\Gourenga.csproj.CopyComplete
 C:\Users\waten\Source\Repos\gourenga\Gourenga\Gourenga\obj\Debug\net5.0-windows\GeneratedInternalTypeHelper.g.cs
+C:\Users\waten\Source\Repos\gourenga\Gourenga\Gourenga\obj\Debug\net5.0-windows\Preview.g.cs
+C:\Users\waten\Source\Repos\gourenga\Gourenga\Gourenga\obj\Debug\net5.0-windows\Preview.baml

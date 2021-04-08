@@ -48,6 +48,8 @@ namespace Gourenga
                 {
                     value.MyStrokeRectangle.Visibility = Visibility.Visible;
                 }
+                //初期Indexの変更
+                OriginalIndex = MyThumbs.IndexOf(value);
             }
         }
 
@@ -58,6 +60,8 @@ namespace Gourenga
         private string LastFileName;//ドロップしたファイル名
         private int LastFileExtensionIndex;//ドロップしたファイルの拡張子判別用インデックス
         private int OriginalIndex;//移動前のIndex
+
+        public Preview MyPreviewWindow;
 
         public MainWindow()
         {
@@ -228,6 +232,10 @@ namespace Gourenga
 
             //作成、Zオーダー、サイズBinding、Canvasに追加、管理リストに追加、マウス移動イベント
             ImageThumb thumb = new(img);
+            //枠表示用の
+            thumb.GotFocus += Thumb_GotFocus;
+            thumb.LostFocus += Thumb_LostFocus;
+            thumb.PreviewKeyDown += Thumb_PreviewKeyDown;
             Panel.SetZIndex(thumb, MyThumbs.Count);
 
             SetThumbSizeBinding(thumb);
@@ -268,6 +276,21 @@ namespace Gourenga
             };
 
         }
+
+        private void Thumb_LostFocus(object sender, RoutedEventArgs e)
+        {
+            var t = sender as ImageThumb;
+            t.MyStrokeRectangle.Visibility = Visibility.Collapsed;
+        }
+
+        private void Thumb_GotFocus(object sender, RoutedEventArgs e)
+        {
+            var t = sender as ImageThumb;
+            MyActiveThumb = t;
+            t.MyStrokeRectangle.Visibility = Visibility.Visible;
+
+        }
+
 
         //ImageThumbのサイズとUpDownとBinding
         private void SetThumbSizeBinding(ImageThumb t)
@@ -366,56 +389,67 @@ namespace Gourenga
             //最短距離のThumbIndexと移動中のThumbのIndexが違うなら入れ替え処理
             if (moyoriIndex != imaIndex)
             {
-                //挿入モードのとき
-                if (MyData.IsSwap == false)
+                //リスト内で移動
+                MoveThumb(imaIndex, moyoriIndex, imaT);
+
+                //indexに従って表示位置変更、ドラッグ移動中のThumbはそのままの位置を保つ
+                SetLocate(moyoriIndex);
+            }
+        }
+
+
+        /// <summary>
+        /// Thumbの入れ替え、ListのIndexを入れ替え
+        /// </summary>
+        /// <param name="imaIndex">移動中ThumbのIndex</param>
+        /// <param name="moyoriIndex">入れ替え先のIndex</param>
+        /// <param name="imaT">移動中のThumb</param>
+        private void MoveThumb(int imaIndex, int moyoriIndex, ImageThumb imaT)
+        {
+            //挿入モードのとき
+            if (MyData.IsSwap == false)
+            {
+                MyThumbs.Move(imaIndex, moyoriIndex);
+            }
+            //入れ替えモードのとき
+            else
+            {
+                ImageThumb moyoriT = MyThumbs[moyoriIndex];
+                ImageThumb originT = MyThumbs[OriginalIndex];
+
+                //移動開始地点のThumbIndexと今移動中のThumbIndexが同じ時
+                if (OriginalIndex == imaIndex)
                 {
-                    MyThumbs.Move(imaIndex, moyoriIndex);
+                    //今移動中と最寄りのThumbを入れ替え
+                    MyThumbs.Move(MyThumbs.IndexOf(imaT), moyoriIndex);
+                    MyThumbs.Move(MyThumbs.IndexOf(moyoriT), OriginalIndex);
                 }
-                //入れ替えモードのとき
+
+                //違うとき
                 else
                 {
-                    ImageThumb moyoriT = MyThumbs[moyoriIndex];
-                    ImageThumb originT = MyThumbs[OriginalIndex];
-
-                    //移動開始地点のThumbIndexと今移動中のThumbIndexが同じ時
-                    if (OriginalIndex == imaIndex)
+                    //最寄りのThumbIndexと移動開始時のIndexが同じ時
+                    if (moyoriIndex == OriginalIndex)
                     {
-                        //今移動中と最寄りのThumbを入れ替え
-                        MyThumbs.Move(MyThumbs.IndexOf(imaT), moyoriIndex);
-                        MyThumbs.Move(MyThumbs.IndexOf(moyoriT), OriginalIndex);
+                        //移動開始地点と今移動中のThumbを入れ替え
+                        MyThumbs.Move(MyThumbs.IndexOf(originT), imaIndex);
+                        MyThumbs.Move(MyThumbs.IndexOf(imaT), OriginalIndex);
                     }
 
                     //違うとき
                     else
                     {
-                        //最寄りのThumbIndexと移動開始時のIndexが同じ時
-                        if (moyoriIndex == OriginalIndex)
-                        {
-                            //移動開始地点と今移動中のThumbを入れ替え
-                            MyThumbs.Move(MyThumbs.IndexOf(originT), imaIndex);
-                            MyThumbs.Move(MyThumbs.IndexOf(imaT), OriginalIndex);
-                        }
-
-                        //違うとき
-                        else
-                        {
-                            //移動開始地点と今移動中のThumbを入れ替え
-                            MyThumbs.Move(MyThumbs.IndexOf(originT), imaIndex);
-                            MyThumbs.Move(MyThumbs.IndexOf(imaT), OriginalIndex);
-                            //今移動中と最寄りのThumbを入れ替え
-                            MyThumbs.Move(MyThumbs.IndexOf(imaT), moyoriIndex);
-                            MyThumbs.Move(MyThumbs.IndexOf(moyoriT), OriginalIndex);
-                        }
+                        //移動開始地点と今移動中のThumbを入れ替え
+                        MyThumbs.Move(MyThumbs.IndexOf(originT), imaIndex);
+                        MyThumbs.Move(MyThumbs.IndexOf(imaT), OriginalIndex);
+                        //今移動中と最寄りのThumbを入れ替え
+                        MyThumbs.Move(MyThumbs.IndexOf(imaT), moyoriIndex);
+                        MyThumbs.Move(MyThumbs.IndexOf(moyoriT), OriginalIndex);
                     }
                 }
-
-
-                //indexに従って表示位置変更
-                SetLocate(moyoriIndex);
             }
-
-
         }
+
 
         //ドラッグ移動イベント時
         private void Thumb_DragDelta(object sender, DragDeltaEventArgs e)
@@ -690,10 +724,17 @@ namespace Gourenga
 
 
         //日時をstringで取得
-        private string MakeDateString()
+        private string MakeFullDateString()
         {
             DateTime time = DateTime.Now;
             string str = time.ToString("yyyyMMdd_HHmmssfff");
+            return str;
+        }
+        //日時をstringで取得
+        private string MakeTimeString()
+        {
+            DateTime time = DateTime.Now;
+            string str = time.ToString("HH:mm:ss.fff");
             return str;
         }
 
@@ -715,6 +756,7 @@ namespace Gourenga
         //RenderTargetBitmap作成
         private BitmapSource MakeSaveBitmap()
         {
+            if (MyThumbs.Count == 0) return null;
             //List<Rect> drawRects = MyData.SaveScaleSizeType switch
             //{
             //    SaveScaleSizeType.OneWidth => MakeRectsForWidthType(),
@@ -837,18 +879,53 @@ namespace Gourenga
             }
             return dRect.Size;
         }
+
+        //初期ファイル名を更新する
+        //重複していたら "_" を末尾に追加する
+        private void SetDefaultFileName(string extensionFilter)
+        {
+            var extensions = extensionFilter.Split("|");
+            extensions = extensions.Select(x => x.Replace("*", "")).ToArray();
+            int i = LastFileExtensionIndex * 2 - 2;
+
+            string path = System.IO.Path.Combine(LastDirectory, LastFileName) + extensions[i];
+            int count = 0;
+            while (System.IO.File.Exists(path) && count < 100)
+            {
+                LastFileName += "_";
+                path = System.IO.Path.Combine(LastDirectory, LastFileName) + extensions[i];
+                count++;
+            }
+        }
         private void SaveImage()
         {
-            var saveFileDialog = new Microsoft.Win32.SaveFileDialog();
-            saveFileDialog.Filter = "*.png|*.png|*.jpg|*.jpg|*.bmp|*.bmp|*.gif|*.gif|*.tiff|*.tiff|*.wdp|*.wdp;*jxr";
-            saveFileDialog.AddExtension = true;//ファイル名に拡張子追加
+            //サイズが一定以上になる場合は確認
+            Size size = GetSaveBitmapSize();
+            if (size.Width > 10000 || size.Height > 10000)
+            {
+                string str = $"保存画像サイズが横縦({size})と大きいけど…\nはい : 処理続行\nいいえ : 中止";
+                if (MessageBox.Show($"{str}", "確認", MessageBoxButton.YesNo) == MessageBoxResult.No)
+                {
+                    return;
+                }
+            }
 
-            //初期フォルダ指定、開いている画像と同じフォルダ
-            saveFileDialog.InitialDirectory = LastDirectory;
-            saveFileDialog.FileName = LastFileName + "_";
-            //saveFileDialog.FileName = MakeDateString();
+            //初期ファイル名更新
+            string extensionFilter = "*.png|*.png|*.jpg|*.jpg|*.bmp|*.bmp|*.gif|*.gif|*.tiff|*.tiff|*.wdp|*.wdp;*jxr";
+            SetDefaultFileName(extensionFilter);
 
-            saveFileDialog.FilterIndex = LastFileExtensionIndex;
+            Microsoft.Win32.SaveFileDialog saveFileDialog = new()
+            {
+                Filter = extensionFilter,
+                AddExtension = true,//ファイル名に拡張子追加
+
+                //初期フォルダ指定、開いている画像と同じフォルダ
+                InitialDirectory = LastDirectory,
+                FileName = LastFileName,
+                //saveFileDialog.FileName = MakeDateString();
+                FilterIndex = LastFileExtensionIndex
+            };
+
 
             if (saveFileDialog.ShowDialog() == true)
             {
@@ -868,9 +945,14 @@ namespace Gourenga
                     {
                         RemoveAreaThumb();
                     }
-                }
 
+                    RenewStatusProcessed($"{System.IO.Path.GetFileName(saveFileDialog.FileName)}を保存した");
+                }
             }
+        }
+        private void RenewStatusProcessed(string message)
+        {
+            MyStatusItemPrecessed.Content = MakeTimeString() + " " + message;
         }
         private BitmapEncoder MakeBitmapEncoder(int filterIndex)
         {
@@ -981,6 +1063,7 @@ namespace Gourenga
             if (MyThumbs.Count <= 0) return;
             BitmapSource bmp = MakeSaveBitmap();
             ClipboadSetImageWithPng(bmp);
+            RenewStatusProcessed("クリップボードにコピーした");
         }
         //クリップボードから追加
         private void AddFromClipboardImage()
@@ -990,6 +1073,7 @@ namespace Gourenga
             {
                 AddImageThumb(MakeImage(bmp));
                 ChangeLocate();
+                RenewStatusProcessed("クリップボードから貼り付けた");
             }
             else
             {
@@ -1103,17 +1187,77 @@ namespace Gourenga
 
         #region ショートカットキー
 
+        //private void ChangeActiveThumb(Key key)
+        //{
+        //    if (MyThumbs.Count == 0) return;
+        //    int i = MyThumbs.IndexOf(MyActiveThumb);
+        //    int ii = 0;
+
+        //    if (key == Key.Up) ii = i - MyData.Col;
+        //    else if (key == Key.Down) ii = i + MyData.Col;
+        //    else if (key == Key.Left) ii = i - 1;
+        //    else if (key == Key.Right) ii = i + 1;
+
+        //    if (ii < 0 || ii > MyThumbs.Count - 1) return;
+        //    MyActiveThumb = MyThumbs[ii];
+        //}
+        private void MoveActiveThumb(Key key, bool isSelect)
+        {
+            //if (MyActiveThumb.IsFocused == false) return;
+            if (MyThumbs.Count == 0) return;
+            int i = MyThumbs.IndexOf(MyActiveThumb);
+            int ii;
+
+            if (key == Key.NumPad1) ii = i + MyData.Col - 1;
+            else if (key == Key.NumPad2) ii = i + MyData.Col;
+            else if (key == Key.NumPad3) ii = i + MyData.Col + 1;
+            else if (key == Key.NumPad4) ii = i - 1;
+            else if (key == Key.NumPad6) ii = i + 1;
+            else if (key == Key.NumPad7) ii = i - MyData.Col - 1;
+            else if (key == Key.NumPad8) ii = i - MyData.Col;
+            else if (key == Key.NumPad9) ii = i - MyData.Col + 1;
+            else return;
+
+
+            if (ii < 0 || ii > MyThumbs.Count - 1) return;
+
+            if (isSelect)
+            {
+                //移動
+                MoveThumb(i, ii, MyActiveThumb);
+                //indexに従って表示位置変更
+                SetLocate();
+            }
+            else
+            {
+                //ActiveThumbの変更
+                MyActiveThumb = MyThumbs[ii];
+            }
+
+        }
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
         {
             switch (Keyboard.Modifiers)
             {
                 case ModifierKeys.None:
+                    //MoveActiveThumb(e.Key);
                     switch (e.Key)
                     {
                         case Key.Delete:
                             RemoveThumb(MyActiveThumb);
                             break;
-
+                        //case Key.Up:
+                        //    ChangeActiveThumb(e.Key);
+                        //    break;
+                        //case Key.Down:
+                        //    ChangeActiveThumb(e.Key);
+                        //    break;
+                        //case Key.Left:
+                        //    ChangeActiveThumb(e.Key);
+                        //    break;
+                        //case Key.Right:
+                        //    ChangeActiveThumb(e.Key);
+                        //    break;
                         default:
                             break;
                     }
@@ -1176,10 +1320,12 @@ namespace Gourenga
         #region ステータスバーの表示更新
 
         //保存サイズの再計算
-        private void ChangedSaveImageSize()
+        private Size GetSaveBitmapSize()
         {
-            if (MyData == null) return;
-            if (MyThumbs.Count == 0) return;
+            Size bmpSize = new();
+            if (MyData == null) return bmpSize;
+            if (MyThumbs.Count == 0) return bmpSize;
+
             var (imageCount, areaRows, areaCols) = GetMakeRectParam();
             int w = 0, h = 0;
             switch (MyData.SaveScaleSizeType)
@@ -1210,10 +1356,51 @@ namespace Gourenga
                 default:
                     break;
             }
-            string strH = h == 0 ? "可変" : h.ToString();
-
-            MyStatusItemSaveImageSize.Content = $"保存サイズ(横{w}, 縦{strH})";
+            //string strH = h == 0 ? "可変" : h.ToString();
+            return new Size(w, h);
+            //MyStatusItemSaveImageSize.Content = $"保存サイズ(横{w}, 縦{strH})";
         }
+        //保存サイズの再計算
+        private void ChangedSaveImageSize()
+        {
+            Size size = GetSaveBitmapSize();
+            //if (MyData == null) return;
+            //if (MyThumbs.Count == 0) return;
+            //var (imageCount, areaRows, areaCols) = GetMakeRectParam();
+            //int w = 0, h = 0;
+            //switch (MyData.SaveScaleSizeType)
+            //{
+            //    //一つの横幅指定
+            //    case SaveScaleSizeType.OneWidth:
+            //        w = MyData.SaveOneWidth * areaCols;
+            //        if (MyData.IsMargin)
+            //        {
+            //            w += (areaCols + 1) * MyData.Margin;
+            //        }
+            //        break;
+            //    //全体指定
+            //    case SaveScaleSizeType.Overall:
+            //        w = MyData.SaveWidth;
+            //        h = MyData.SaveHeight;
+            //        break;
+            //    //左上画像の横幅
+            //    case SaveScaleSizeType.MatchTopLeftImage:
+            //        w = MyThumbs[0].MyBitmapSource.PixelWidth * areaCols;
+            //        h = MyThumbs[0].MyBitmapSource.PixelHeight * areaRows;
+            //        if (MyData.IsMargin)
+            //        {
+            //            w += (areaCols + 1) * MyData.Margin;
+            //            h += (areaRows + 1) * MyData.Margin;
+            //        }
+            //        break;
+            //    default:
+            //        break;
+            //}
+            string strH = size.Height == 0 ? "可変" : size.Height.ToString();
+
+            MyStatusItemSaveImageSize.Content = $"保存サイズ(横{size.Width}, 縦{strH})";
+        }
+
 
         #endregion ステータスバーの表示更新
 
@@ -1294,9 +1481,26 @@ namespace Gourenga
             ChangedSaveImageSize();
         }
 
+        private void MyButtonPreview_Click(object sender, RoutedEventArgs e)
+        {
+            if (MyPreviewWindow == null)
+            {
+                MyPreviewWindow = new Preview(this);
+                MyPreviewWindow.Owner = this;
+                MyPreviewWindow.SetBitmap(MakeSaveBitmap());
+                MyPreviewWindow.ShowDialog();
+            }
+        }
+
+        private void Thumb_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            MoveActiveThumb(e.Key, Keyboard.Modifiers == ModifierKeys.Control);
+        }
 
 
         #endregion クリックとかのイベント関連
+
+
 
     }
 
@@ -1397,6 +1601,21 @@ namespace Gourenga
                 return DependencyProperty.UnsetValue;
         }
     }
+
+    public class MyConverterBoolVisibility : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            Visibility v = (Visibility)value;
+            return v == Visibility.Visible;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
     #endregion コンバーター
 
 

@@ -40,6 +40,7 @@ namespace Gourenga
             this.ApplyTemplate();
             MyPanel = (Canvas)template.FindName("panel", this);
             MyPanel.Background = Brushes.Transparent;
+            this.Focusable = true;//フォーカスできる
 
             this.SetBinding(WidthProperty, new Binding("Size"));
             this.SetBinding(HeightProperty, new Binding("Size"));
@@ -66,7 +67,7 @@ namespace Gourenga
             _ = MyStrokeRectangle.SetBinding(WidthProperty, MakeBinding(img, WidthProperty, BindingMode.OneWay));
             _ = MyStrokeRectangle.SetBinding(HeightProperty, MakeBinding(img, HeightProperty, BindingMode.OneWay));
 
-
+            
         }
         private Binding MakeBinding(DependencyObject o, DependencyProperty prop, BindingMode mode)
         {

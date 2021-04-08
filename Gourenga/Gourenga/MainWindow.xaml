@@ -23,6 +23,9 @@
         <StatusBarItem x:Name="MyStatusItem1" Content="item1"/>
         <Separator/>
         <StatusBarItem x:Name="MyStatusItemSaveImageSize" Content="save image size"/>
+        <Separator/>
+        <StatusBarItem x:Name="MyStatusItemPrecessed" HorizontalAlignment="Right"
+                       Content="processed" Margin="0,0,10,0"/>
       </StatusBar>
       <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Background="WhiteSmoke">
         <StackPanel.Resources>
@@ -37,6 +40,7 @@
         <Button x:Name="MyButtonClear" Content="全削除" Click="MyButtonClear_Click"/>
         <Button x:Name="MyButtonToClipboard" Content="コピー" Click="MyButtonToClipboard_Click"/>
         <Button x:Name="MyButtonFromClipboard" Content="貼り付け" Click="MyButtonFromClipboard_Click"/>
+        <Button x:Name="MyButtonPreview" Content="プレビュー" Click="MyButtonPreview_Click"/>
       </StackPanel>
 
       <!--<Expander DockPanel.Dock="Top" Header="expander" IsExpanded="True" ExpandDirection="Down">
@@ -131,7 +135,7 @@
 
 
       </StackPanel>
-      <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+      <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Focusable="False">
         <Canvas x:Name="MyCanvas" Margin="10"
                 HorizontalAlignment="Left" VerticalAlignment="Top">
           <Rectangle x:Name="MyRectangle" Stroke="Cyan" StrokeThickness="5"
