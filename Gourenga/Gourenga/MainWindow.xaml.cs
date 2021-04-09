@@ -1187,25 +1187,35 @@ namespace Gourenga
 
         #region ショートカットキー
 
-        //private void ChangeActiveThumb(Key key)
-        //{
-        //    if (MyThumbs.Count == 0) return;
-        //    int i = MyThumbs.IndexOf(MyActiveThumb);
-        //    int ii = 0;
-
-        //    if (key == Key.Up) ii = i - MyData.Col;
-        //    else if (key == Key.Down) ii = i + MyData.Col;
-        //    else if (key == Key.Left) ii = i - 1;
-        //    else if (key == Key.Right) ii = i + 1;
-
-        //    if (ii < 0 || ii > MyThumbs.Count - 1) return;
-        //    MyActiveThumb = MyThumbs[ii];
-        //}
+        //
+        /// <summary>
+        /// ActiveThumbの変更と入れ替え移動
+        /// </summary>
+        /// <param name="key">押されたキー</param>
+        /// <param name="isSelect">trueでActiveThumbの変更、falseで入れ替え移動</param>
         private void MoveActiveThumb(Key key, bool isSelect)
         {
             //if (MyActiveThumb.IsFocused == false) return;
             if (MyThumbs.Count == 0) return;
             int i = MyThumbs.IndexOf(MyActiveThumb);
+            int mod = i % MyData.Col;
+            //左右制限
+            //左端判定
+            if (mod == 0)
+            {
+                //左方向のキーなら何もしない
+                if (key == Key.NumPad1 || key == Key.NumPad4 || key == Key.NumPad7)
+                    return;
+            }
+            //右端判定
+            else if (mod == MyData.Col - 1)
+            {
+                //右方向のキーなら何もしない
+                if (key == Key.NumPad3 || key == Key.NumPad6 || key == Key.NumPad9)
+                    return;
+            }
+
+            //移動先のIndex
             int ii;
 
             if (key == Key.NumPad1) ii = i + MyData.Col - 1;
@@ -1218,20 +1228,23 @@ namespace Gourenga
             else if (key == Key.NumPad9) ii = i - MyData.Col + 1;
             else return;
 
-
+            //上下制限
             if (ii < 0 || ii > MyThumbs.Count - 1) return;
 
+            //入れ替え移動
             if (isSelect)
             {
-                //移動
+                //入れ替え
                 MoveThumb(i, ii, MyActiveThumb);
+                MyThumbs[ii].Focus();
                 //indexに従って表示位置変更
                 SetLocate();
             }
+            //ActiveThumbの変更
             else
             {
-                //ActiveThumbの変更
-                MyActiveThumb = MyThumbs[ii];
+                //MyActiveThumb = MyThumbs[ii];
+                MyThumbs[ii].Focus();
             }
 
         }
@@ -1246,18 +1259,6 @@ namespace Gourenga
                         case Key.Delete:
                             RemoveThumb(MyActiveThumb);
                             break;
-                        //case Key.Up:
-                        //    ChangeActiveThumb(e.Key);
-                        //    break;
-                        //case Key.Down:
-                        //    ChangeActiveThumb(e.Key);
-                        //    break;
-                        //case Key.Left:
-                        //    ChangeActiveThumb(e.Key);
-                        //    break;
-                        //case Key.Right:
-                        //    ChangeActiveThumb(e.Key);
-                        //    break;
                         default:
                             break;
                     }
@@ -1364,38 +1365,6 @@ namespace Gourenga
         private void ChangedSaveImageSize()
         {
             Size size = GetSaveBitmapSize();
-            //if (MyData == null) return;
-            //if (MyThumbs.Count == 0) return;
-            //var (imageCount, areaRows, areaCols) = GetMakeRectParam();
-            //int w = 0, h = 0;
-            //switch (MyData.SaveScaleSizeType)
-            //{
-            //    //一つの横幅指定
-            //    case SaveScaleSizeType.OneWidth:
-            //        w = MyData.SaveOneWidth * areaCols;
-            //        if (MyData.IsMargin)
-            //        {
-            //            w += (areaCols + 1) * MyData.Margin;
-            //        }
-            //        break;
-            //    //全体指定
-            //    case SaveScaleSizeType.Overall:
-            //        w = MyData.SaveWidth;
-            //        h = MyData.SaveHeight;
-            //        break;
-            //    //左上画像の横幅
-            //    case SaveScaleSizeType.MatchTopLeftImage:
-            //        w = MyThumbs[0].MyBitmapSource.PixelWidth * areaCols;
-            //        h = MyThumbs[0].MyBitmapSource.PixelHeight * areaRows;
-            //        if (MyData.IsMargin)
-            //        {
-            //            w += (areaCols + 1) * MyData.Margin;
-            //            h += (areaRows + 1) * MyData.Margin;
-            //        }
-            //        break;
-            //    default:
-            //        break;
-            //}
             string strH = size.Height == 0 ? "可変" : size.Height.ToString();
 
             MyStatusItemSaveImageSize.Content = $"保存サイズ(横{size.Width}, 縦{strH})";
@@ -1481,6 +1450,7 @@ namespace Gourenga
             ChangedSaveImageSize();
         }
 
+        //プレビューウィンドウ開く
         private void MyButtonPreview_Click(object sender, RoutedEventArgs e)
         {
             if (MyPreviewWindow == null)
@@ -1492,6 +1462,7 @@ namespace Gourenga
             }
         }
 
+        //テンキーでThumbの移動、ActiveThumbの変更
         private void Thumb_PreviewKeyDown(object sender, KeyEventArgs e)
         {
             MoveActiveThumb(e.Key, Keyboard.Modifiers == ModifierKeys.Control);
