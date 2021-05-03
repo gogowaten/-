@@ -7,8 +7,9 @@
         mc:Ignorable="d"
         Title="Preview" Height="450" Width="614"
         Loaded="Window_Loaded"
-        Closed="Window_Closed">
-  <Grid>
+        Closed="Window_Closed"
+        ResizeMode="CanResizeWithGrip">
+  <Grid UseLayoutRounding="True">
     <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
       <Image x:Name="MyPreviewImage" Stretch="None"/>
     </ScrollViewer>

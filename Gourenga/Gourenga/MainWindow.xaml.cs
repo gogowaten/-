@@ -654,14 +654,17 @@ namespace Gourenga
                     if (h > maxH) maxH = h;
                     double x = iCol * pieceW;
                     x += (pieceW - w) / 2;
-
+                    x = (int)(x + 0.5);//四捨五入
+                    w = (int)(w + 0.5);//四捨五入
                     tempRect.Add(new Rect(x, 0, w, h));
                 }
                 for (int i = 0; i < tempRect.Count; i++)
                 {
                     Rect r = tempRect[i];
                     double y = yKijun + (maxH - r.Height) / 2;
-                    drawRects.Add(new Rect(r.X, y, r.Width, r.Height));
+                    y = (int)(y + 0.5);//四捨五入
+                    int h = (int)(r.Height + 0.5);//四捨五入
+                    drawRects.Add(new Rect(r.X, y, r.Width, h));
                 }
                 yKijun += maxH;
             }
@@ -669,7 +672,7 @@ namespace Gourenga
             return drawRects;
         }
 
-        //保存サイズは1画像の横幅を基準にする場合
+        //保存サイズは1画像の横幅を基準にする場合、サイズは四捨五入で整数にする
         private List<Rect> MakeRectsForWidthTypeWithMargin()
         {
             //保存対象画像数と実際の縦横個数を取得
@@ -706,14 +709,17 @@ namespace Gourenga
                     if (h > maxH) maxH = h;
                     double xx = margin + (x * (pieceW + margin));
                     xx += (pieceW - w) / 2;
-
+                    xx = (int)xx;//小数切り捨て
+                    w = (int)(w + 0.5);//四捨五入
                     tempRect.Add(new Rect(xx, 0, w, h));
                 }
                 for (int i = 0; i < tempRect.Count; i++)
                 {
                     Rect r = tempRect[i];
                     double yy = margin + yKijun + (maxH - r.Height) / 2;
-                    drawRects.Add(new Rect(r.X, yy, r.Width, r.Height));
+                    yy = (int)yy;//小数切り捨て
+                    int h = (int)(r.Height + 0.5);//四捨五入
+                    drawRects.Add(new Rect(r.X, yy, r.Width, h));
                 }
                 yKijun += maxH + margin;
             }
@@ -797,11 +803,11 @@ namespace Gourenga
                     break;
             }
             //最終的な全体画像サイズ取得
-            Size renderBimpSize = GetRenderSize(drawRects);
+            Size renderBitmpSize = GetRenderSize(drawRects);
             if (MyData.SaveScaleSizeType == SaveScaleSizeType.Overall)
             {
-                renderBimpSize.Width = MyData.SaveWidth;
-                renderBimpSize.Height = MyData.SaveHeight;
+                renderBitmpSize.Width = MyData.SaveWidth;
+                renderBitmpSize.Height = MyData.SaveHeight;
             }
 
             DrawingVisual dv = new();
@@ -813,13 +819,25 @@ namespace Gourenga
                     dc.DrawRectangle(
                         Brushes.White, null,
                         new Rect(0, 0,
-                        (int)(renderBimpSize.Width + 0.5),
-                        (int)(renderBimpSize.Height + 0.5)));
+                        (int)(renderBitmpSize.Width + 0.5),
+                        (int)(renderBitmpSize.Height + 0.5)));
                 }
                 //各画描画
                 for (int i = 0; i < drawRects.Count; i++)
                 {
-                    BitmapSource source = MyThumbs[i].MyBitmapSource;
+                    int w = (int)Math.Ceiling(drawRects[i].Width);
+                    int h = (int)Math.Ceiling(drawRects[i].Height);
+                    BitmapSource source;
+                    //縮小処理
+                    if (MyThumbs[i].MyBitmapSource.PixelWidth > drawRects[i].Width)
+                    {
+                        source = LanczosBgra32(MyThumbs[i].MyBitmapSource, w, h, GetLanczosWeightG);
+                    }
+                    //拡大処理
+                    else
+                    {
+                        source = MyThumbs[i].MyBitmapSource;
+                    }
                     dc.DrawImage(source, drawRects[i]);
                 }
             }
@@ -831,8 +849,8 @@ namespace Gourenga
                 MyData.SaveScaleSizeType == SaveScaleSizeType.MatchTopLeftImage)
             {
                 //サイズは四捨五入
-                int width = (int)(renderBimpSize.Width + 0.5);
-                int height = (int)(renderBimpSize.Height + 0.5);
+                int width = (int)(renderBitmpSize.Width + 0.5);
+                int height = (int)(renderBitmpSize.Height + 0.5);
                 renderBitmap = new(width, height, 96, 96, PixelFormats.Pbgra32);
                 renderBitmap.Render(dv);
             }
@@ -848,6 +866,7 @@ namespace Gourenga
             }
             return renderBitmap;
         }
+
         //描画サイズ取得
         //最終的な全体画像サイズ計算、RectのUnionを使う
         private Size GetRenderSize(List<Rect> drawRects)
@@ -903,7 +922,7 @@ namespace Gourenga
             Size size = GetSaveBitmapSize();
             if (size.Width > 10000 || size.Height > 10000)
             {
-                string str = $"保存画像サイズが横縦({size})と大きいけど…\nはい : 処理続行\nいいえ : 中止";
+                string str = $"保存画像サイズが横縦({size})と大きい、保存する？\nはい : 処理続行\nいいえ : 中止";
                 if (MessageBox.Show($"{str}", "確認", MessageBoxButton.YesNo) == MessageBoxResult.No)
                 {
                     return;
@@ -931,23 +950,21 @@ namespace Gourenga
             {
                 BitmapEncoder encoder = MakeBitmapEncoder(saveFileDialog.FilterIndex);
                 encoder.Frames.Add(BitmapFrame.Create(MakeSaveBitmap(), null, MakeMetadata(encoder), null));
-                using (var fs = new System.IO.FileStream(
+                using var fs = new System.IO.FileStream(
                     saveFileDialog.FileName,
                     System.IO.FileMode.Create,
-                    System.IO.FileAccess.Write))
+                    System.IO.FileAccess.Write);
+                //保存
+                encoder.Save(fs);
+                //保存フォルダのパスと拡張子を記録
+                LastDirectory = System.IO.Path.GetDirectoryName(saveFileDialog.FileName);
+                LastFileExtensionIndex = saveFileDialog.FilterIndex;
+                if (MyData.IsSavedBitmapRemove)
                 {
-                    //保存
-                    encoder.Save(fs);
-                    //保存フォルダのパスと拡張子を記録
-                    LastDirectory = System.IO.Path.GetDirectoryName(saveFileDialog.FileName);
-                    LastFileExtensionIndex = saveFileDialog.FilterIndex;
-                    if (MyData.IsSavedBitmapRemove)
-                    {
-                        RemoveAreaThumb();
-                    }
-
-                    RenewStatusProcessed($"{System.IO.Path.GetFileName(saveFileDialog.FileName)}を保存した");
+                    RemoveAreaThumb();
                 }
+
+                RenewStatusProcessed($"{System.IO.Path.GetFileName(saveFileDialog.FileName)}を保存した");
             }
         }
         private void RenewStatusProcessed(string message)
@@ -1026,6 +1043,184 @@ namespace Gourenga
         #endregion 保存
 
 
+        #region 画像縮小処理
+        //窓関数
+        private double Sinc(double d)
+        {
+            return Math.Sin(Math.PI * d) / (Math.PI * d);
+        }
+        //かなりシャープ
+        private double GetLanczosWeightG(double d, int n)
+        {
+            if (d == 0) return 1.0;
+            else if (d > n) return 0.0;
+            else
+            {
+                double nn = n / 2.0;
+                return Sinc(d / nn);
+            }
+        }
+
+        private double GetLanczosWeightX(double d, int n, double scale)
+        {
+            if (d == 0) return 1.0;
+            else if (d > n) return 0.0;
+            else
+            {
+                return Sinc(d / scale) * Sinc(d / (n * scale));
+            }
+        }
+
+        /// <summary>
+        /// 画像の拡大縮小、ランチョス法で補完、PixelFormats.Bgra32専用)
+        /// 
+        /// </summary>
+        /// <param name="source">PixelFormats.Bgra32のBitmap</param>
+        /// <param name="width">変換後の横ピクセル数を指定</param>
+        /// <param name="height">変換後の縦ピクセル数を指定</param>
+        /// <param name="n">最大参照距離、逆倍率の2倍がいい(1/5倍なら5*2=10)</param>
+        /// <returns></returns>
+        private BitmapSource LanczosBgra32(BitmapSource source, int width, int height, Func<double, int, double> myFunc)
+        {
+            //1ピクセルあたりのバイト数、Byte / Pixel
+            int pByte = (source.Format.BitsPerPixel + 7) / 8;
+
+            //元画像の画素値の配列作成
+            int sourceWidth = source.PixelWidth;
+            int sourceHeight = source.PixelHeight;
+            int sourceStride = sourceWidth * pByte;//1行あたりのbyte数
+            byte[] sourcePixels = new byte[sourceHeight * sourceStride];
+            source.CopyPixels(sourcePixels, sourceStride, 0);
+
+            //変換後の画像の画素値の配列用
+            double widthScale = (double)sourceWidth / width;//横倍率
+            double heightScale = (double)sourceHeight / height;
+            int stride = width * pByte;
+            byte[] pixels = new byte[height * stride];
+
+            //逆倍率、横だけで見ているけど盾もあったほうがいいかも
+            double reScale = widthScale;
+            //参照距離、四捨五入？切り上げのほうがいい？
+            int n = (int)(reScale * 2);
+
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    //参照点
+                    double rx = (x + 0.5) * widthScale;
+                    double ry = (y + 0.5) * heightScale;
+                    //参照点四捨五入で基準
+                    int xKijun = (int)(rx + 0.5);
+                    int yKijun = (int)(ry + 0.5);
+                    //修正した重み取得
+                    var ws = GetFixWeights(rx, ry, n);
+
+                    double bSum = 0, gSum = 0, rSum = 0, aSum = 0;
+                    double alphaFix = 0;
+                    //参照範囲は基準から上(xは左)へn、下(xは右)へn-1の範囲
+                    for (int yy = -n; yy < n; yy++)
+                    {
+                        int yc = yKijun + yy;
+                        //マイナス座標や画像サイズを超えていたら、収まるように修正
+                        yc = yc < 0 ? 0 : yc > sourceHeight - 1 ? sourceHeight - 1 : yc;
+                        for (int xx = -n; xx < n; xx++)
+                        {
+                            int xc = xKijun + xx;
+                            xc = xc < 0 ? 0 : xc > sourceWidth - 1 ? sourceWidth - 1 : xc;
+                            int pp = (yc * sourceStride) + (xc * pByte);
+                            double weight = ws[xx + n, yy + n];
+                            //完全透明ピクセル(a=0)だった場合はRGBは計算しないで
+                            //重みだけ足し算して後で使う
+                            if (sourcePixels[pp + 3] == 0)
+                            {
+                                alphaFix += weight;
+                                continue;
+                            }
+                            bSum += sourcePixels[pp] * weight;
+                            gSum += sourcePixels[pp + 1] * weight;
+                            rSum += sourcePixels[pp + 2] * weight;
+                            aSum += sourcePixels[pp + 3] * weight;
+                        }
+                    }
+
+                    //                    C#、WPF、バイリニア法での画像の拡大縮小変換、半透明画像(32bit画像)対応版 - 午後わてんのブログ
+                    //https://gogowaten.hatenablog.com/entry/2021/04/17/151803#32bit%E3%81%A824bit%E3%81%AF%E9%81%95%E3%81%A3%E3%81%9F
+                    //完全透明ピクセルによるRGB値の修正
+                    //参照範囲がすべて完全透明だった場合は0のままでいいので計算しない
+                    if (alphaFix == 1) continue;
+                    //完全透明ピクセルが混じっていた場合は、その分を差し引いてRGB修正する
+                    double rgbFix = 1 / (1 - alphaFix);
+                    bSum *= rgbFix;
+                    gSum *= rgbFix;
+                    rSum *= rgbFix;
+
+                    //0～255の範囲を超えることがあるので、修正
+                    bSum = bSum < 0 ? 0 : bSum > 255 ? 255 : bSum;
+                    gSum = gSum < 0 ? 0 : gSum > 255 ? 255 : gSum;
+                    rSum = rSum < 0 ? 0 : rSum > 255 ? 255 : rSum;
+                    aSum = aSum < 0 ? 0 : aSum > 255 ? 255 : aSum;
+
+                    int ap = (y * stride) + (x * pByte);
+                    pixels[ap] = (byte)(bSum + 0.5);
+                    pixels[ap + 1] = (byte)(gSum + 0.5);
+                    pixels[ap + 2] = (byte)(rSum + 0.5);
+                    pixels[ap + 3] = (byte)(aSum + 0.5);
+                }
+            };
+
+            BitmapSource bitmap = BitmapSource.Create(width, height, 96, 96, source.Format, null, pixels, stride);
+            return bitmap;
+
+            //修正した重み取得
+            double[,] GetFixWeights(double rx, double ry, int n)
+            {
+                int nn = n * 2;//全体の参照距離
+                //基準になる距離計算
+                double sx = rx - (int)rx;
+                double sy = ry - (int)ry;
+                double dx = (sx < 0.5) ? 0.5 - sx : 0.5 - sx + 1;
+                double dy = (sy < 0.5) ? 0.5 - sy : 0.5 - sy + 1;
+
+                //各ピクセルの重みと、重み合計を計算
+                double[] xw = new double[nn];
+                double[] yw = new double[nn];
+                double xSum = 0, ySum = 0;
+                for (int i = -n; i < n; i++)
+                {
+                    double x = myFunc(Math.Abs(dx + i), n);
+                    xSum += x;
+                    xw[i + n] = x;
+                    double y = myFunc(Math.Abs(dy + i), n);
+                    ySum += y;
+                    yw[i + n] = y;
+                }
+
+                //重み合計で割り算して修正、全体で100%(1.0)にする
+                for (int i = 0; i < nn; i++)
+                {
+                    xw[i] /= xSum;
+                    yw[i] /= ySum;
+                }
+
+                // x * y
+                double[,] ws = new double[nn, nn];
+                for (int y = 0; y < nn; y++)
+                {
+                    for (int x = 0; x < nn; x++)
+                    {
+                        ws[x, y] = xw[x] * yw[y];
+                    }
+                }
+                return ws;
+            }
+        }
+
+
+        #endregion 画像縮小処理
+
+
+
         #region クリップボード
 
         //        クリップボードに複数の形式のデータをコピーする - .NET Tips(VB.NET, C#...)
@@ -1061,6 +1256,18 @@ namespace Gourenga
         private void ToClipboard()
         {
             if (MyThumbs.Count <= 0) return;
+            //サイズが一定以上になる場合は確認
+            Size size = GetSaveBitmapSize();
+            if (size.Width * size.Height > 25_000_000)
+            {
+                //int B = (int)size.Width * (int)size.Height * 4;
+                //int k = B / 1000;//1024?
+                //int MB = k / 1000;
+                if (MessageBox.Show($"画像が大きい{size}、コピーする？", "確認", MessageBoxButton.OKCancel) == MessageBoxResult.Cancel)
+                {
+                    return;
+                }
+            }
             BitmapSource bmp = MakeSaveBitmap();
             ClipboadSetImageWithPng(bmp);
             RenewStatusProcessed("クリップボードにコピーした");
@@ -1222,6 +1429,7 @@ namespace Gourenga
             else if (key == Key.NumPad2) ii = i + MyData.Col;
             else if (key == Key.NumPad3) ii = i + MyData.Col + 1;
             else if (key == Key.NumPad4) ii = i - 1;
+            else if (key == Key.NumPad5) ii = i + MyData.Col;
             else if (key == Key.NumPad6) ii = i + 1;
             else if (key == Key.NumPad7) ii = i - MyData.Col - 1;
             else if (key == Key.NumPad8) ii = i - MyData.Col;
@@ -1502,7 +1710,7 @@ namespace Gourenga
         //隙間を白で塗る
         public bool IsSaveBackgroundWhite { get; set; }
         //余白サイズ
-        public int Margin { get; set; }
+        public int Margin { get; set; } = 10;
         //余白フラグ
         public bool IsMargin { get; set; } = false;
 
