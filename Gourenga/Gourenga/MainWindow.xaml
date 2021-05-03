@@ -68,7 +68,7 @@
                            MyValue="{Binding Path=Size}" Margin="0,4,0,0"/>
           <GroupBox Header="保存時の動作">
             <StackPanel>
-              <CheckBox Content="保存した画像は削除" IsChecked="{Binding Path=IsSavedBitmapRemove}"/>
+              <CheckBox Content="保存した画像は非表示にする" IsChecked="{Binding Path=IsSavedBitmapRemove}"/>
               <CheckBox Content="画像同士の隙間は白にする" IsChecked="{Binding Path=IsSaveBackgroundWhite}"/>
               <StackPanel Orientation="Horizontal">
                 <CheckBox x:Name="MyCheckBoxMargin" Content="余白を付ける" VerticalAlignment="Center"
