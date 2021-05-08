@@ -12,7 +12,7 @@
     "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder": {}
   },
   "project": {
-    "version": "1.6.0",
+    "version": "1.7.0",
     "restore": {
       "projectUniqueName": "C:\\Users\\waten\\Source\\Repos\\gourenga\\Gourenga\\Gourenga\\Gourenga.csproj",
       "projectName": "Gourenga",
