@@ -2428,7 +2428,7 @@ namespace Gourenga
         //ウィンドウ位置、サイズ
         [DataMember] public double Top { get; set; } = 0;
         [DataMember] public double Left { get; set; } = 0;
-        [DataMember] public double Width { get; set; } = 614;
+        [DataMember] public double Width { get; set; } = 654;
         [DataMember] public double Height { get; set; } = 520;
 
         //プレビューウィンドウ位置、サイズ
