@@ -20,13 +20,40 @@ namespace Gourenga
     public partial class Preview : Window
     {
         private MainWindow MyMainWindow;
-        public Preview(MainWindow window)
+        public Preview(MainWindow window, Data data)
         {
             InitializeComponent();
             MyMainWindow = window;
 
+            //ウィンドウ位置とサイズのBinding
+            this.DataContext = data;
+            Binding b = new();
+            b.Path = new PropertyPath(nameof(data.PreWindowHeight));
+            b.Mode = BindingMode.TwoWay;
+            this.SetBinding(HeightProperty, b);
+
+            b = new();
+            b.Path = new PropertyPath(nameof(data.PreWindowWidth));
+            b.Mode = BindingMode.TwoWay;
+            this.SetBinding(WidthProperty, b);
+            
+            b = new();
+            b.Path = new PropertyPath(nameof(data.PreWindowLeft));
+            b.Mode = BindingMode.TwoWay;
+            this.SetBinding(LeftProperty, b);
+            
+            b = new();
+            b.Path = new PropertyPath(nameof(data.PreWindowTop));
+            b.Mode = BindingMode.TwoWay;
+            this.SetBinding(TopProperty, b);
+
+
+
+
             //背景を市松模様にする
             this.Background = MakeTileBrush(MakeCheckeredPattern(10, Colors.WhiteSmoke, Colors.LightGray));
+
+
         }
 
         private void Window_Closed(object sender, EventArgs e)
@@ -35,7 +62,7 @@ namespace Gourenga
             MyMainWindow.MyPreviewWindow = null;
         }
 
-      
+
         /// <summary>
         /// 市松模様の元になる画像作成、2色を2マスずつ合計4マス交互に並べた画像、
         /// □■
@@ -107,11 +134,13 @@ namespace Gourenga
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            //起動直後
-            //表示位置をメインウィンドウの少し下にする
-            var main = MyMainWindow.PointToScreen(new Point());
-            this.Top = main.Y + 130;
-            this.Left = main.X;
+            ////起動直後
+            ////表示位置をメインウィンドウの少し下にする
+            //var main = MyMainWindow.PointToScreen(new Point());
+            //this.Top = main.Y + 130;
+            //this.Left = main.X;
+
+
 
             ////            WPFで、スクリーンの正確な解像度を取得する方法 | // もちぶろ
             ////https://slash-mochi.net/?p=3370
@@ -129,6 +158,11 @@ namespace Gourenga
         public void SetBitmap(BitmapSource source)
         {
             MyPreviewImage.Source = source;
+        }
+
+        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            //MyMainWindow.MyPreviewWindow = this;
         }
     }
 }

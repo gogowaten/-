@@ -5,9 +5,10 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Gourenga"
         mc:Ignorable="d"
-        Title="Preview" Height="450" Width="614"
+        Title="Preview" Height="520" Width="614"
         Loaded="Window_Loaded"
         Closed="Window_Closed"
+        Closing="Window_Closing"
         ResizeMode="CanResizeWithGrip">
   <Grid UseLayoutRounding="True">
     <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">

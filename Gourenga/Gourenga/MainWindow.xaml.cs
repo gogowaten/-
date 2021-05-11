@@ -19,13 +19,22 @@ using System.Globalization;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
+using System.Runtime.InteropServices;//Imagingで使っている
+using System.Windows.Interop;//CreateBitmapSourceFromHBitmapで使っている
+//using System.Windows.Threading;//DispatcherTimerで使っている
+using System.Runtime.Serialization;
+using System.Xml;
+using Microsoft.Win32;
+
 namespace Gourenga
 {
     public partial class MainWindow : Window
     {
-        //アプリ情報表示用、名前、バージョン
+        //アプリ情報表示用、名前、バージョン、実行ファイルパス
         private const string APP_NAME = "絶対画連合連画";
         private string AppVersion;
+        private string AppDir;
+        private const string APP_DATA_FILE_NAME = "AppData.xml";
 
         private ObservableCollection<ImageThumb> MyThumbs;
 
@@ -53,14 +62,25 @@ namespace Gourenga
             }
         }
 
+        //public Preview MyPreviewWindow
+        //{
+        //    get => myPreviewWindow; 
+        //    set
+        //    {
+        //        myPreviewWindow = value;
+        //        MyData.PreWindowHeight = value.ActualHeight;
+        //        MyData.PreWindowLeft = value.Left;
+        //        MyData.PreWindowTop = value.Top;
+        //        MyData.PreWindowWidth = value.ActualWidth;
+        //    }
+        //}
 
         private List<Point> MyLocate = new();//座標リスト
-        private Data MyData;//DataContextに指定する
+        public Data MyData;//DataContextに指定する
         private string LastDirectory;//ドロップしたファイルのフォルダパス
         private string LastFileName;//ドロップしたファイル名
         private int LastFileExtensionIndex;//ドロップしたファイルの拡張子判別用インデックス
         private int OriginalIndex;//移動前のIndex
-
         public Preview MyPreviewWindow;
 
         public MainWindow()
@@ -69,32 +89,45 @@ namespace Gourenga
             MyInitialize();
 
         }
+
+
+
+        //初期設定
         private void MyInitialize()
         {
-            for (int i = 0; i < 3; i++)
-            {
-                for (int j = i; j < 12; j += 3)
-                {
-                    var neko = j;
-                }
-            }
 #if DEBUG
             this.Left = 0;
             this.Top = 0;
             MyButtonTest.Visibility = Visibility.Visible;
 #endif
 
-            MyData = new();
-            this.DataContext = MyData;
-            MyThumbs = MyData.MyThumbs;
             RenderOptions.SetBitmapScalingMode(this, BitmapScalingMode.Fant);
 
 
-            //アプリ情報
+            //アプリ情報収集
             string[] coms = Environment.GetCommandLineArgs();
             AppVersion = System.Diagnostics.FileVersionInfo.GetVersionInfo(coms[0]).FileVersion;
             this.Title = APP_NAME + AppVersion;
+            AppDir = Environment.CurrentDirectory;
+
+            //設定ファイル読み込み
+            string filePath = System.IO.Path.Combine(AppDir, APP_DATA_FILE_NAME);
+            if (System.IO.File.Exists(filePath))
+            {
+                MyData = LoadData(filePath);
+            }
+            else
+            {
+                MyData = new Data();
+            }
+            this.DataContext = MyData;
+            MyThumbs = MyData.MyThumbs;
+
         }
+
+
+
+
 
 
         /// <summary>
@@ -636,7 +669,7 @@ namespace Gourenga
                 case SaveScaleSizeType.OneWidth:
                     pieceW = MyData.SaveOneWidth;
                     break;
-                case SaveScaleSizeType.MatchTopLeftImage:
+                case SaveScaleSizeType.TopLeft:
                     pieceW = MyThumbs[0].MyBitmapSource.PixelWidth;
                     break;
                 default:
@@ -693,7 +726,7 @@ namespace Gourenga
             //サイズとX座標
             //指定横幅に縮小、アスペクト比は保持
             double pieceW = MyData.SaveOneWidth;
-            if (MyData.SaveScaleSizeType == SaveScaleSizeType.MatchTopLeftImage)
+            if (MyData.SaveScaleSizeType == SaveScaleSizeType.TopLeft)
             {
                 pieceW = MyThumbs[0].MyBitmapSource.PixelWidth;
             }
@@ -784,11 +817,11 @@ namespace Gourenga
             List<Rect> drawRects;
             switch (MyData.SaveScaleSizeType, MyData.IsMargin)
             {
-                case (SaveScaleSizeType.Overall, true):
+                case (SaveScaleSizeType.All, true):
                     drawRects = MakeRectsForOverallTypeWithMargin();
                     break;
 
-                case (SaveScaleSizeType.Overall, false):
+                case (SaveScaleSizeType.All, false):
                     drawRects = MakeRectsForOverallType();
                     break;
 
@@ -800,11 +833,11 @@ namespace Gourenga
                     drawRects = MakeRectsForWidthType();
                     break;
 
-                case (SaveScaleSizeType.MatchTopLeftImage, true):
+                case (SaveScaleSizeType.TopLeft, true):
                     drawRects = MakeRectsForWidthTypeWithMargin();
                     break;
 
-                case (SaveScaleSizeType.MatchTopLeftImage, false):
+                case (SaveScaleSizeType.TopLeft, false):
                     drawRects = MakeRectsForWidthType();
                     break;
 
@@ -814,7 +847,7 @@ namespace Gourenga
             }
             //最終的な全体画像サイズ取得
             Size renderBitmpSize = GetRenderSize(drawRects);
-            if (MyData.SaveScaleSizeType == SaveScaleSizeType.Overall)
+            if (MyData.SaveScaleSizeType == SaveScaleSizeType.All)
             {
                 renderBitmpSize.Width = MyData.SaveWidth;
                 renderBitmpSize.Height = MyData.SaveHeight;
@@ -862,7 +895,7 @@ namespace Gourenga
             //Bitmap作成
             RenderTargetBitmap renderBitmap;
             if (MyData.SaveScaleSizeType == SaveScaleSizeType.OneWidth ||
-                MyData.SaveScaleSizeType == SaveScaleSizeType.MatchTopLeftImage)
+                MyData.SaveScaleSizeType == SaveScaleSizeType.TopLeft)
             {
                 //サイズは四捨五入
                 int width = (int)(renderBitmpSize.Width + 0.5);
@@ -870,7 +903,7 @@ namespace Gourenga
                 renderBitmap = new(width, height, 96, 96, PixelFormats.Pbgra32);
                 renderBitmap.Render(dv);
             }
-            else if (MyData.SaveScaleSizeType == SaveScaleSizeType.Overall)
+            else if (MyData.SaveScaleSizeType == SaveScaleSizeType.All)
             {
                 //決め打ちサイズ
                 renderBitmap = new(MyData.SaveWidth, MyData.SaveHeight, 96, 96, PixelFormats.Pbgra32);
@@ -906,7 +939,7 @@ namespace Gourenga
                     dRect.Height += margin;
                 }
             }
-            else if (MyData.SaveScaleSizeType == SaveScaleSizeType.MatchTopLeftImage &&
+            else if (MyData.SaveScaleSizeType == SaveScaleSizeType.TopLeft &&
                 MyData.IsMargin)
             {
                 dRect.Width += margin;
@@ -996,7 +1029,9 @@ namespace Gourenga
                     encoder = new PngBitmapEncoder();
                     break;
                 case 2:
-                    encoder = new JpegBitmapEncoder();
+                    JpegBitmapEncoder j = new();
+                    j.QualityLevel = MyData.JpegQuality;
+                    encoder = j;
                     break;
                 case 3:
                     encoder = new BmpBitmapEncoder();
@@ -1009,7 +1044,7 @@ namespace Gourenga
                     break;
                 case 6:
                     //wmpはロスレス指定、じゃないと1bppで保存時に画像が崩れるしファイルサイズも大きくなる
-                    var wmp = new WmpBitmapEncoder();
+                    WmpBitmapEncoder wmp = new();
                     wmp.ImageQualityLevel = 1.0f;
                     encoder = wmp;
                     break;
@@ -2069,10 +2104,10 @@ namespace Gourenga
                     switch (e.Key)
                     {
                         case Key.Up:
-                            
+
                             break;
                         case Key.Down:
-                            
+
                             break;
                         case Key.S:
                             if (MyThumbs.Count <= 0) return;
@@ -2140,12 +2175,12 @@ namespace Gourenga
                     }
                     break;
                 //全体指定
-                case SaveScaleSizeType.Overall:
+                case SaveScaleSizeType.All:
                     w = MyData.SaveWidth;
                     h = MyData.SaveHeight;
                     break;
                 //左上画像の横幅
-                case SaveScaleSizeType.MatchTopLeftImage:
+                case SaveScaleSizeType.TopLeft:
                     w = MyThumbs[0].MyBitmapSource.PixelWidth * areaCols;
                     h = MyThumbs[0].MyBitmapSource.PixelHeight * areaRows;
                     if (MyData.IsMargin)
@@ -2172,6 +2207,53 @@ namespace Gourenga
 
 
         #endregion ステータスバーの表示更新
+
+        #region アプリの設定保存と読み込み
+        private bool SaveData(string path, object data)
+        {
+            DataContractSerializer serializer = new(typeof(Data));
+            XmlWriterSettings settings = new();
+            settings.Encoding = new UTF8Encoding();
+            try
+            {
+                using (XmlWriter xw = XmlWriter.Create(path, settings))
+                {
+                    serializer.WriteObject(xw, data);
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"アプリの設定保存できなかった\n{ex.Message}",
+                    $"{System.Reflection.Assembly.GetExecutingAssembly()}");
+                return false;
+            }
+        }
+
+        private Data LoadData(string path)
+        {
+            DataContractSerializer serializer = new(typeof(Data));
+            try
+            {
+                using (XmlReader xr = XmlReader.Create(path))
+                {
+                    return (Data)serializer.ReadObject(xr);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"読み込みできなかった\n{ex.Message}",
+                    $"{System.Reflection.Assembly.GetExecutingAssembly().GetName()}");
+                return null;
+            }
+        }
+
+        #endregion アプリの設定保存と読み込み
+
+
+
 
         private void MyButtonTest_Click(object sender, RoutedEventArgs e)
         {
@@ -2255,10 +2337,11 @@ namespace Gourenga
         {
             if (MyPreviewWindow == null)
             {
-                MyPreviewWindow = new Preview(this);
+                MyPreviewWindow = new Preview(this, MyData);
                 MyPreviewWindow.Owner = this;
                 MyPreviewWindow.SetBitmap(MakeSaveBitmap());
                 MyPreviewWindow.ShowDialog();
+
             }
         }
 
@@ -2268,14 +2351,48 @@ namespace Gourenga
             MoveActiveThumb(e.Key, Keyboard.Modifiers == ModifierKeys.Control);
         }
 
+        //設定を名前を付けて保存
+        private void MyButtonSaveData_Click(object sender, RoutedEventArgs e)
+        {
+            Microsoft.Win32.SaveFileDialog dialog = new();
+            dialog.Filter = "(xml)|*.xml";
+            if (dialog.ShowDialog() == true)
+            {
+                SaveData(dialog.FileName, MyData);
+            }
+
+        }
+
+        //設定ファイルを選択して読み込み
+        private void MyButtonLoadData_Click(object sender, RoutedEventArgs e)
+        {
+            Microsoft.Win32.OpenFileDialog dialog = new();
+            dialog.Filter = "(xml)|*.xml";
+            if (dialog.ShowDialog() == true)
+            {
+                var data = LoadData(dialog.FileName);
+                if (data == null) return;
+                MyData = data;
+                this.DataContext = MyData;
+            }
+        }
+
+        //アプリ終了時、設定保存
+        private void Window_Closed(object sender, EventArgs e)
+        {
+            _ = SaveData(AppDir + "\\" + APP_DATA_FILE_NAME, MyData);
+        }
+
+
 
         #endregion クリックとかのイベント関連
 
-
-
     }
 
-    //MainWindowのDataContextにBindingするデータ用クラス
+
+
+    //MainWindowのDataContextにBindingするデータ用クラス    
+    [DataContract]//using System.Runtime.Serialization;
     public class Data// : System.ComponentModel.INotifyPropertyChanged
     {
         //public event PropertyChangedEventHandler PropertyChanged;
@@ -2283,33 +2400,53 @@ namespace Gourenga
         //{
         //    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(pName));
         //}
-
-        public int Row { get; set; } = 2;
-        public int Col { get; set; } = 2;
-        public int Size { get; set; } = 120;
-        public int SaveWidth { get; set; } = 240;
-        public int SaveHeight { get; set; } = 160;
-        public int SaveOneWidth { get; set; } = 120;
+        [DataMember] public int Row { get; set; } = 2;
+        [DataMember] public int Col { get; set; } = 2;
+        [DataMember] public int Size { get; set; } = 120;
+        [DataMember] public int SaveWidth { get; set; } = 240;
+        [DataMember] public int SaveHeight { get; set; } = 160;
+        [DataMember] public int SaveOneWidth { get; set; } = 120;
 
         //ドラッグ移動での入れ替えモード、trueで入れ替え、falseは挿入
-        public bool IsSwap { get; set; } = true;
+        [DataMember] public bool IsSwap { get; set; } = true;
 
 
-        public bool IsSavedBitmapRemove { get; set; }
+        [DataMember] public bool IsSavedBitmapRemove { get; set; }
 
         //保存サイズの指定方法
-        public SaveScaleSizeType SaveScaleSizeType { get; set; } = SaveScaleSizeType.OneWidth;
+        [DataMember] public SaveScaleSizeType SaveScaleSizeType { get; set; } = SaveScaleSizeType.OneWidth;
         //隙間を白で塗る
-        public bool IsSaveBackgroundWhite { get; set; }
+        [DataMember] public bool IsSaveBackgroundWhite { get; set; }
         //余白サイズ
-        public int Margin { get; set; } = 10;
+        [DataMember] public int Margin { get; set; } = 10;
         //余白フラグ
-        public bool IsMargin { get; set; } = false;
+        [DataMember] public bool IsMargin { get; set; } = false;
+
+        //jpeg品質
+        [DataMember] public int JpegQuality { get; set; } = 90;
+
+        //ウィンドウ位置、サイズ
+        [DataMember] public double Top { get; set; } = 0;
+        [DataMember] public double Left { get; set; } = 0;
+        [DataMember] public double Width { get; set; } = 614;
+        [DataMember] public double Height { get; set; } = 520;
+
+        //プレビューウィンドウ位置、サイズ
+        [DataMember] public double PreWindowTop { get; set; } = 100;
+        [DataMember] public double PreWindowLeft { get; set; } = 100;
+        [DataMember] public double PreWindowWidth { get; set; } = 614;
+        [DataMember] public double PreWindowHeight { get; set; } = 520;
+
 
 
         //これはMainWindowの方で管理したほうが良かったかも
         public ObservableCollection<ImageThumb> MyThumbs { get; set; } = new();
 
+        [OnDeserialized]
+        private void OnDeserialized(System.Runtime.Serialization.StreamingContext c)
+        {
+            if (MyThumbs == null) MyThumbs = new();
+        }
 
     }
 
@@ -2395,9 +2532,10 @@ namespace Gourenga
     //保存時の縮尺指定
     public enum SaveScaleSizeType
     {
+        //変更時はXAMLのほうでも変更する必要がある、radioButtonのところのConverterParameter
         OneWidth,//ひとつあたりの幅
-        Overall,//全体
-        MatchTopLeftImage,//先頭画像横幅にあわせる
+        All,//全体
+        TopLeft,//先頭画像横幅にあわせる
     }
 
     #endregion 列挙型

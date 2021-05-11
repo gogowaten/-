@@ -6,11 +6,13 @@
         xmlns:nup="clr-namespace:ControlLibraryCore20200620;assembly=ControlLibraryCore20200620"
         xmlns:local="clr-namespace:Gourenga"
         mc:Ignorable="d"
-        Title="MainWindow" Height="520" Width="614"
+        Title="MainWindow" Height="{Binding Path=Height, Mode=TwoWay}" Width="{Binding Path=Width, Mode=TwoWay}"
+        Top="{Binding Path=Top, Mode=TwoWay}" Left="{Binding Path=Left, Mode=TwoWay}"
         ResizeMode="CanResizeWithGrip"
         AllowDrop="True"
         Drop="Window_Drop"
-        PreviewKeyDown="Window_PreviewKeyDown">
+        PreviewKeyDown="Window_PreviewKeyDown"
+        Closed="Window_Closed">
   <Window.DataContext>
     <local:Data/>
   </Window.DataContext>
@@ -35,12 +37,14 @@
         </StackPanel.Resources>
         <Button x:Name="MyButtonTest" Content="test" Click="MyButtonTest_Click" Visibility="Collapsed"/>
         <Button x:Name="MyButtonSave" Content="保存" Click="MyButtonSave_Click"/>
+        <Button x:Name="MyButtonPreview" Content="プレビュー" Click="MyButtonPreview_Click"/>
         <Button x:Name="MyButtonRemove" Content="削除" Click="MyButtonRemove_Click"/>
         <Button x:Name="MyButtonRemoveArea" Content="範囲削除" Click="MyButtonRemoveArea_Click"/>
         <Button x:Name="MyButtonClear" Content="全削除" Click="MyButtonClear_Click"/>
         <Button x:Name="MyButtonToClipboard" Content="コピー" Click="MyButtonToClipboard_Click"/>
         <Button x:Name="MyButtonFromClipboard" Content="貼り付け" Click="MyButtonFromClipboard_Click"/>
-        <Button x:Name="MyButtonPreview" Content="プレビュー" Click="MyButtonPreview_Click"/>
+        <Button x:Name="MyButtonSaveData" Content="設定保存" Click="MyButtonSaveData_Click"/>
+        <Button x:Name="MyButtonLoadData" Content="設定読込" Click="MyButtonLoadData_Click"/>
       </StackPanel>
 
       <!--<Expander DockPanel.Dock="Top" Header="expander" IsExpanded="True" ExpandDirection="Down">
@@ -68,16 +72,26 @@
                            MyValue="{Binding Path=Size}" Margin="0,4,0,0"/>
           <GroupBox Header="保存時の動作">
             <StackPanel>
-              <CheckBox Content="保存した画像は非表示にする" IsChecked="{Binding Path=IsSavedBitmapRemove}"/>
-              <CheckBox Content="画像同士の隙間は白にする" IsChecked="{Binding Path=IsSaveBackgroundWhite}"/>
+              <CheckBox Content="保存した画像は非表示にする"
+                        IsChecked="{Binding Path=IsSavedBitmapRemove, Mode=TwoWay}"/>
+              <CheckBox Content="画像同士の隙間は白にする"
+                        IsChecked="{Binding Path=IsSaveBackgroundWhite, Mode=TwoWay}"/>
               <StackPanel Orientation="Horizontal">
                 <CheckBox x:Name="MyCheckBoxMargin" Content="余白を付ける" VerticalAlignment="Center"
-                      IsChecked="{Binding IsMargin}" Click="MyCheckBoxMargin_Click"/>
+                          IsChecked="{Binding IsMargin, Mode=TwoWay}"
+                          Click="MyCheckBoxMargin_Click"/>
                 <nup:NumericUpDown Name="MyUpDownMargin" MyMinValue="0" MyMaxValue="100"
                                MyStringFormat="000" MyValueChanged="MyUpDownMargin_MyValueChanged"
                                MyValue="{Binding Margin}"
                                IsEnabled="{Binding IsMargin}"/>
               </StackPanel>
+              <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Jpeg品質" VerticalAlignment="Center"/>
+                <nup:NumericUpDown Name="MyUpDownJpeg" MyMinValue="90" MyMaxValue="100"
+                               MyStringFormat="000" MySmallChange="1" MyLargeChange="1"
+                               MyValue="{Binding JpegQuality}"/>
+              </StackPanel>
+              
             </StackPanel>
           </GroupBox>
           
@@ -114,7 +128,7 @@
               <StackPanel Orientation="Horizontal" Margin="10,0,0,0">
                 <RadioButton Content="全体サイズ"  VerticalAlignment="Center" MinWidth="80"
                              Click="RadioButtonSaveSize_Click"
-                             IsChecked="{Binding Path=SaveScaleSizeType, Converter={StaticResource ConvSaveType}, ConverterParameter=Overall}"/>
+                             IsChecked="{Binding Path=SaveScaleSizeType, Converter={StaticResource ConvSaveType}, ConverterParameter=All}"/>
                 <nup:NumericUpDown Name="MyUpDownWidth" MyValueChanged="MyUpDownSize_MyValueChanged"
                            MyMinValue="1" MyMaxValue="10240" MyStringFormat="横 00000"
                            MySmallChange="1" MyLargeChange="40" MinWidth="70"
@@ -127,7 +141,7 @@
               <StackPanel Orientation="Horizontal" Margin="10,0,0,0">
                 <RadioButton Content="全画像を左上画像の横幅に合わせる"
                            Click="RadioButtonSaveSize_Click"
-                           IsChecked="{Binding Path=SaveScaleSizeType, Converter={StaticResource ConvSaveType}, ConverterParameter=MatchTopLeftImage}"/>
+                           IsChecked="{Binding Path=SaveScaleSizeType, Converter={StaticResource ConvSaveType}, ConverterParameter=TopLeft}"/>
               </StackPanel>
             </StackPanel>
           </GroupBox>
