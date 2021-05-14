@@ -26,6 +26,8 @@
         <Separator/>
         <StatusBarItem x:Name="MyStatusItemSaveImageSize" Content="save image size"/>
         <Separator/>
+        <StatusBarItem x:Name="MyStatusItemSelectedImageSize" Content="image size"/>
+        <Separator/>
         <StatusBarItem x:Name="MyStatusItemPrecessed" HorizontalAlignment="Right"
                        Content="processed" Margin="0,0,10,0"/>
       </StatusBar>
@@ -65,7 +67,7 @@
           <TextBlock Text="text"/>
         </StackPanel>
       </Expander>-->
-      <Expander DockPanel.Dock="Top" Header="設定" IsExpanded="True" ExpandDirection="Down">
+      <Expander DockPanel.Dock="Top" Header="設定" IsExpanded="{Binding IsExpanded}" ExpandDirection="Down">
       <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
         <StackPanel Margin="10,10,5,10">
           <GroupBox Header="連結範囲">

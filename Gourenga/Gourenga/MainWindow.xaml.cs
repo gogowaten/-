@@ -56,24 +56,18 @@ namespace Gourenga
                 if (value != null)
                 {
                     value.MyStrokeRectangle.Visibility = Visibility.Visible;
+                    MyStatusItemSelectedImageSize.Content = $"サイズ(横 {value.MyBitmapSource.PixelWidth}, 縦 {value.MyBitmapSource.PixelHeight})";
+                }
+                else if (value == null)
+                {
+                    MyStatusItemSelectedImageSize.Content = $"サイズ(横 0, 縦 0)";
                 }
                 //初期Indexの変更
                 OriginalIndex = MyThumbs.IndexOf(value);
             }
         }
 
-        //public Preview MyPreviewWindow
-        //{
-        //    get => myPreviewWindow; 
-        //    set
-        //    {
-        //        myPreviewWindow = value;
-        //        MyData.PreWindowHeight = value.ActualHeight;
-        //        MyData.PreWindowLeft = value.Left;
-        //        MyData.PreWindowTop = value.Top;
-        //        MyData.PreWindowWidth = value.ActualWidth;
-        //    }
-        //}
+
 
         private List<Point> MyLocate = new();//座標リスト
         public Data MyData;//DataContextに指定する
@@ -2425,6 +2419,9 @@ namespace Gourenga
 
         //jpeg品質
         [DataMember] public int JpegQuality { get; set; } = 90;
+
+        //Expanderの開閉状態
+        [DataMember] public bool IsExpanded { get; set; } = true;
 
         //ウィンドウ位置、サイズ
         [DataMember] public double Top { get; set; } = 0;
