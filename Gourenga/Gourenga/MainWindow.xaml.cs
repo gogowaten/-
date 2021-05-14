@@ -2160,6 +2160,7 @@ namespace Gourenga
         {
             Size bmpSize = new();
             if (MyData == null) return bmpSize;
+            if (MyThumbs == null) return bmpSize;
             if (MyThumbs.Count == 0) return bmpSize;
 
             var (imageCount, areaRows, areaCols) = GetMakeRectParam();
