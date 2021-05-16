@@ -648,6 +648,27 @@ namespace Gourenga
             return (imageCount, areaRows, areaCols);
         }
 
+
+        private List<Rect> MakeRectsForSpesial(int margin)
+        {
+            //保存対象画像数と実際の縦横個数を取得
+            (int imageCount, int areaRows, int areaCols) = GetMakeRectParam();
+
+            List<Rect> drawRects = new();
+
+            for (int y = 0; y < areaRows; y++)
+            {
+                for (int x = 0; x < areaCols; x++)
+                {
+                    if (imageCount <= y * areaCols + x) break;
+                    int xx = margin + (x * 640) + (x * margin);
+                    int yy = margin + (y * 480) + (y * margin);
+                    drawRects.Add(new Rect(xx, yy, 640, 480));
+                }
+            }
+            return drawRects;
+        }
+
         //保存サイズは1画像の横幅を基準にする場合
         private List<Rect> MakeRectsForWidthType()
         {
@@ -815,7 +836,6 @@ namespace Gourenga
                 case (SaveScaleSizeType.All, true):
                     drawRects = MakeRectsForOverallTypeWithMargin();
                     break;
-
                 case (SaveScaleSizeType.All, false):
                     drawRects = MakeRectsForOverallType();
                     break;
@@ -823,7 +843,6 @@ namespace Gourenga
                 case (SaveScaleSizeType.OneWidth, true):
                     drawRects = MakeRectsForWidthTypeWithMargin();
                     break;
-
                 case (SaveScaleSizeType.OneWidth, false):
                     drawRects = MakeRectsForWidthType();
                     break;
@@ -831,9 +850,15 @@ namespace Gourenga
                 case (SaveScaleSizeType.TopLeft, true):
                     drawRects = MakeRectsForWidthTypeWithMargin();
                     break;
-
                 case (SaveScaleSizeType.TopLeft, false):
                     drawRects = MakeRectsForWidthType();
+                    break;
+
+                case (SaveScaleSizeType.Special, true):
+                    drawRects = MakeRectsForSpesial(MyData.Margin);
+                    break;
+                case (SaveScaleSizeType.Special, false):
+                    drawRects = MakeRectsForSpesial(0);
                     break;
 
                 default:
@@ -841,11 +866,11 @@ namespace Gourenga
                     break;
             }
             //最終的な全体画像サイズ取得
-            Size renderBitmpSize = GetRenderSize(drawRects);
+            Size renderBitmapSize = GetRenderSize(drawRects);
             if (MyData.SaveScaleSizeType == SaveScaleSizeType.All)
             {
-                renderBitmpSize.Width = MyData.SaveWidth;
-                renderBitmpSize.Height = MyData.SaveHeight;
+                renderBitmapSize.Width = MyData.SaveWidth;
+                renderBitmapSize.Height = MyData.SaveHeight;
             }
 
             DrawingVisual dv = new();
@@ -857,8 +882,8 @@ namespace Gourenga
                     dc.DrawRectangle(
                         Brushes.White, null,
                         new Rect(0, 0,
-                        (int)(renderBitmpSize.Width + 0.5),
-                        (int)(renderBitmpSize.Height + 0.5)));
+                        (int)(renderBitmapSize.Width + 0.5),
+                        (int)(renderBitmapSize.Height + 0.5)));
                 }
                 //各画描画
                 for (int i = 0; i < drawRects.Count; i++)
@@ -877,6 +902,11 @@ namespace Gourenga
                         //窓関数で補完
                         //source = LanczosBgra32(MyThumbs[i].MyBitmapSource, w, h);
                     }
+                    else if (MyData.SaveScaleSizeType == SaveScaleSizeType.Special)
+                    {
+                        //PS1スクショ専用、640x480にきれいにリサイズ
+                        source = BitmapPS1(MyThumbs[i].MyBitmapSource);
+                    }
                     //縮小処理なし、そのまま描画
                     else
                     {
@@ -893,8 +923,8 @@ namespace Gourenga
                 MyData.SaveScaleSizeType == SaveScaleSizeType.TopLeft)
             {
                 //サイズは四捨五入
-                int width = (int)(renderBitmpSize.Width + 0.5);
-                int height = (int)(renderBitmpSize.Height + 0.5);
+                int width = (int)(renderBitmapSize.Width + 0.5);
+                int height = (int)(renderBitmapSize.Height + 0.5);
                 renderBitmap = new(width, height, 96, 96, PixelFormats.Pbgra32);
                 renderBitmap.Render(dv);
             }
@@ -902,6 +932,11 @@ namespace Gourenga
             {
                 //決め打ちサイズ
                 renderBitmap = new(MyData.SaveWidth, MyData.SaveHeight, 96, 96, PixelFormats.Pbgra32);
+                renderBitmap.Render(dv);
+            }
+            else if (MyData.SaveScaleSizeType == SaveScaleSizeType.Special)
+            {
+                renderBitmap = new((int)renderBitmapSize.Width, (int)renderBitmapSize.Height, 96, 96, PixelFormats.Pbgra32);
                 renderBitmap.Render(dv);
             }
             else
@@ -934,8 +969,8 @@ namespace Gourenga
                     dRect.Height += margin;
                 }
             }
-            else if (MyData.SaveScaleSizeType == SaveScaleSizeType.TopLeft &&
-                MyData.IsMargin)
+            else if (MyData.SaveScaleSizeType == SaveScaleSizeType.TopLeft && MyData.IsMargin
+                || MyData.SaveScaleSizeType == SaveScaleSizeType.Special && MyData.IsMargin)
             {
                 dRect.Width += margin;
                 dRect.Height += margin;
@@ -1087,6 +1122,540 @@ namespace Gourenga
         }
 
         #endregion 保存
+
+        #region 特殊保存PS1スクショ用
+
+        //窓関数
+        private double SincA(double d)
+        {
+            if (d == 0) return 1.0;
+            return Math.Sin(Math.PI * d) / (Math.PI * d);
+        }
+
+
+        //これのn=4が一番キレイに見える
+        /// <summary>
+        /// 画像のリサイズ、窓関数で補完、PixelFormats.Bgra32専用)
+        /// 高速化なし
+        /// </summary>
+        /// <param name="source">PixelFormats.Bgra32のBitmap</param>
+        /// <param name="width">変換後の横ピクセル数を指定</param>
+        /// <param name="height">変換後の縦ピクセル数を指定</param>
+        /// <param name="n">最大参照距離、3か4がいい</param>
+        /// <returns></returns>
+        private BitmapSource SincBgra32(BitmapSource source, int width, int height, int n)
+        {
+            //1ピクセルあたりのバイト数、Byte / Pixel
+            int pByte = (source.Format.BitsPerPixel + 7) / 8;
+
+            //元画像の画素値の配列作成
+            int sourceWidth = source.PixelWidth;
+            int sourceHeight = source.PixelHeight;
+            int sourceStride = sourceWidth * pByte;//1行あたりのbyte数
+            byte[] sourcePixels = new byte[sourceHeight * sourceStride];
+            source.CopyPixels(sourcePixels, sourceStride, 0);
+
+            //変換後の画像の画素値の配列用
+            double widthScale = (double)sourceWidth / width;//横倍率(逆倍率)
+            double heightScale = (double)sourceHeight / height;
+            int stride = width * pByte;
+            byte[] pixels = new byte[height * stride];
+
+            //倍率
+            double scale = width / (double)sourceWidth;
+            //逆倍率
+            double inScale = widthScale;
+            //最大参照距離 = 逆倍率 * n
+            double limitD = widthScale * n;
+            //実際の参照距離、は指定距離*逆倍率の切り上げにしたけど、切り捨てでも見た目の変化なし            
+            int actD = (int)Math.Ceiling(limitD);
+            //int actD = (int)(limitD);
+
+
+            //拡大時の調整(これがないと縮小専用)
+            if (1.0 < scale)
+            {
+                scale = 1.0;//重み計算に使う、拡大時は1固定
+                actD = n;//拡大時の実際の参照距離は指定距離と同じ
+                inScale = 1.0;
+            }
+
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    //参照点
+                    double rx = (x + 0.5) * widthScale;
+                    double ry = (y + 0.5) * heightScale;
+                    //参照点四捨五入で基準
+                    int xKijun = (int)(rx + 0.5);
+                    int yKijun = (int)(ry + 0.5);
+                    //修正した重み取得
+                    double[,] ws = GetFixWeights(rx, ry, actD, inScale);
+
+                    double bSum = 0, gSum = 0, rSum = 0, aSum = 0;
+                    double alphaFix = 0;
+                    //参照範囲は基準から上(xは左)へnn、下(xは右)へnn-1の範囲
+                    for (int yy = -actD; yy < actD; yy++)
+                    {
+                        int yc = yKijun + yy;
+                        //マイナス座標や画像サイズを超えていたら、収まるように修正
+                        yc = yc < 0 ? 0 : yc > sourceHeight - 1 ? sourceHeight - 1 : yc;
+                        for (int xx = -actD; xx < actD; xx++)
+                        {
+                            int xc = xKijun + xx;
+                            xc = xc < 0 ? 0 : xc > sourceWidth - 1 ? sourceWidth - 1 : xc;
+                            int pp = (yc * sourceStride) + (xc * pByte);
+                            double weight = ws[xx + actD, yy + actD];
+                            //完全透明ピクセル(a=0)だった場合はRGBは計算しないで
+                            //重みだけ足し算して後で使う
+                            if (sourcePixels[pp + 3] == 0)
+                            {
+                                alphaFix += weight;
+                                continue;
+                            }
+                            bSum += sourcePixels[pp] * weight;
+                            gSum += sourcePixels[pp + 1] * weight;
+                            rSum += sourcePixels[pp + 2] * weight;
+                            aSum += sourcePixels[pp + 3] * weight;
+                        }
+                    }
+
+                    //                    C#、WPF、バイリニア法での画像の拡大縮小変換、半透明画像(32bit画像)対応版 - 午後わてんのブログ
+                    //https://gogowaten.hatenablog.com/entry/2021/04/17/151803#32bit%E3%81%A824bit%E3%81%AF%E9%81%95%E3%81%A3%E3%81%9F
+                    //完全透明ピクセルによるRGB値の修正
+                    //参照範囲がすべて完全透明だった場合は0のままでいいので計算しない
+                    if (alphaFix == 1) continue;
+                    //完全透明ピクセルが混じっていた場合は、その分を差し引いてRGB修正する
+                    double rgbFix = 1 / (1 - alphaFix);
+                    bSum *= rgbFix;
+                    gSum *= rgbFix;
+                    rSum *= rgbFix;
+
+                    //0～255の範囲を超えることがあるので、修正
+                    bSum = bSum < 0 ? 0 : bSum > 255 ? 255 : bSum;
+                    gSum = gSum < 0 ? 0 : gSum > 255 ? 255 : gSum;
+                    rSum = rSum < 0 ? 0 : rSum > 255 ? 255 : rSum;
+                    aSum = aSum < 0 ? 0 : aSum > 255 ? 255 : aSum;
+
+                    int ap = (y * stride) + (x * pByte);
+                    pixels[ap] = (byte)(bSum + 0.5);
+                    pixels[ap + 1] = (byte)(gSum + 0.5);
+                    pixels[ap + 2] = (byte)(rSum + 0.5);
+                    pixels[ap + 3] = (byte)(aSum + 0.5);
+                }
+            }
+
+            //_ = Parallel.For(0, height, y =>
+            //  {
+
+            //  });
+
+            BitmapSource bitmap = BitmapSource.Create(width, height, 96, 96, source.Format, null, pixels, stride);
+            return bitmap;
+
+            //修正した重み取得
+            double[,] GetFixWeights(double rx, double ry, int actN, double inScale)
+            {
+                //全体の参照距離
+                int nn = actN * 2;
+                //基準になる距離計算
+                double sx = rx - (int)rx;
+                double sy = ry - (int)ry;
+                double dx = (sx < 0.5) ? 0.5 - sx : 0.5 - sx + 1;
+                double dy = (sy < 0.5) ? 0.5 - sy : 0.5 - sy + 1;
+
+                //各ピクセルの重みと、重み合計を計算
+                double[] xw = new double[nn];
+                double[] yw = new double[nn];
+                double xSum = 0, ySum = 0;
+                for (int i = -actN; i < actN; i++)
+                {
+                    //距離に倍率を掛け算したのをLanczosで重み計算
+                    double x = SincA(Math.Abs(dx + i) * inScale);
+                    xSum += x;
+                    xw[i + actN] = x;
+                    double y = SincA(Math.Abs(dy + i) * inScale);
+                    ySum += y;
+                    yw[i + actN] = y;
+                }
+
+                //重み合計で割り算して修正、全体で100%(1.0)にする
+                for (int i = 0; i < nn; i++)
+                {
+                    xw[i] /= xSum;
+                    yw[i] /= ySum;
+                }
+
+                // x * y
+                double[,] ws = new double[nn, nn];
+                for (int y = 0; y < nn; y++)
+                {
+                    for (int x = 0; x < nn; x++)
+                    {
+                        ws[x, y] = xw[x] * yw[y];
+                    }
+                }
+                return ws;
+            }
+        }
+
+
+
+        /// <summary>
+        /// 画像のリサイズ、窓関数で補完、PixelFormats.Bgra32専用)
+        /// 高速化なし
+        /// </summary>
+        /// <param name="source">PixelFormats.Bgra32のBitmap</param>
+        /// <param name="width">変換後の横ピクセル数を指定</param>
+        /// <param name="height">変換後の縦ピクセル数を指定</param>
+        /// <param name="n">最大参照距離、3か4がいい</param>
+        /// <returns></returns>
+        private BitmapSource SincTypeGBgra32(BitmapSource source, int width, int height, int n)
+        {
+            //1ピクセルあたりのバイト数、Byte / Pixel
+            int pByte = (source.Format.BitsPerPixel + 7) / 8;
+
+            //元画像の画素値の配列作成
+            int sourceWidth = source.PixelWidth;
+            int sourceHeight = source.PixelHeight;
+            int sourceStride = sourceWidth * pByte;//1行あたりのbyte数
+            byte[] sourcePixels = new byte[sourceHeight * sourceStride];
+            source.CopyPixels(sourcePixels, sourceStride, 0);
+
+            //変換後の画像の画素値の配列用
+            double widthScale = (double)sourceWidth / width;//横倍率(逆倍率)
+            double heightScale = (double)sourceHeight / height;
+            int stride = width * pByte;
+            byte[] pixels = new byte[height * stride];
+
+            //倍率
+            double scale = width / (double)sourceWidth;
+            //逆倍率
+            double inScale = widthScale;
+            //最大参照距離 = 逆倍率 * n
+            double limitD = widthScale * n;
+            //実際の参照距離、は指定距離*逆倍率の切り上げにしたけど、切り捨てでも見た目の変化なし            
+            int actD = (int)Math.Ceiling(limitD);
+            //int actD = (int)(limitD);
+
+
+            //拡大時の調整(これがないと縮小専用)
+            if (1.0 < scale)
+            {
+                scale = 1.0;//重み計算に使うようで、拡大時は1固定
+                actD = n;//拡大時の実際の参照距離は指定距離と同じ
+                inScale = 1.0;
+            }
+
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    //参照点
+                    double rx = (x + 0.5) * widthScale;
+                    double ry = (y + 0.5) * heightScale;
+                    //参照点四捨五入で基準
+                    int xKijun = (int)(rx + 0.5);
+                    int yKijun = (int)(ry + 0.5);
+                    //修正した重み取得
+                    //double[,] ws = GetFixWeights(rx, ry, actN, scale*0.1, n);
+                    double[,] ws = GetFixWeights(rx, ry, actD, n);
+
+                    double bSum = 0, gSum = 0, rSum = 0, aSum = 0;
+                    double alphaFix = 0;
+                    //参照範囲は基準から上(xは左)へnn、下(xは右)へnn-1の範囲
+                    for (int yy = -actD; yy < actD; yy++)
+                    {
+                        int yc = yKijun + yy;
+                        //マイナス座標や画像サイズを超えていたら、収まるように修正
+                        yc = yc < 0 ? 0 : yc > sourceHeight - 1 ? sourceHeight - 1 : yc;
+                        for (int xx = -actD; xx < actD; xx++)
+                        {
+                            int xc = xKijun + xx;
+                            xc = xc < 0 ? 0 : xc > sourceWidth - 1 ? sourceWidth - 1 : xc;
+                            int pp = (yc * sourceStride) + (xc * pByte);
+                            double weight = ws[xx + actD, yy + actD];
+                            //完全透明ピクセル(a=0)だった場合はRGBは計算しないで
+                            //重みだけ足し算して後で使う
+                            if (sourcePixels[pp + 3] == 0)
+                            {
+                                alphaFix += weight;
+                                continue;
+                            }
+                            bSum += sourcePixels[pp] * weight;
+                            gSum += sourcePixels[pp + 1] * weight;
+                            rSum += sourcePixels[pp + 2] * weight;
+                            aSum += sourcePixels[pp + 3] * weight;
+                        }
+                    }
+
+                    //                    C#、WPF、バイリニア法での画像の拡大縮小変換、半透明画像(32bit画像)対応版 - 午後わてんのブログ
+                    //https://gogowaten.hatenablog.com/entry/2021/04/17/151803#32bit%E3%81%A824bit%E3%81%AF%E9%81%95%E3%81%A3%E3%81%9F
+                    //完全透明ピクセルによるRGB値の修正
+                    //参照範囲がすべて完全透明だった場合は0のままでいいので計算しない
+                    if (alphaFix == 1) continue;
+                    //完全透明ピクセルが混じっていた場合は、その分を差し引いてRGB修正する
+                    double rgbFix = 1 / (1 - alphaFix);
+                    bSum *= rgbFix;
+                    gSum *= rgbFix;
+                    rSum *= rgbFix;
+
+                    //0～255の範囲を超えることがあるので、修正
+                    bSum = bSum < 0 ? 0 : bSum > 255 ? 255 : bSum;
+                    gSum = gSum < 0 ? 0 : gSum > 255 ? 255 : gSum;
+                    rSum = rSum < 0 ? 0 : rSum > 255 ? 255 : rSum;
+                    aSum = aSum < 0 ? 0 : aSum > 255 ? 255 : aSum;
+
+                    int ap = (y * stride) + (x * pByte);
+                    pixels[ap] = (byte)(bSum + 0.5);
+                    pixels[ap + 1] = (byte)(gSum + 0.5);
+                    pixels[ap + 2] = (byte)(rSum + 0.5);
+                    pixels[ap + 3] = (byte)(aSum + 0.5);
+                }
+            }
+
+            //_ = Parallel.For(0, height, y =>
+            //  {
+
+            //  });
+
+            BitmapSource bitmap = BitmapSource.Create(width, height, 96, 96, source.Format, null, pixels, stride);
+            return bitmap;
+
+            //修正した重み取得
+            double[,] GetFixWeights(double rx, double ry, int actN, int n)
+            {
+                //全体の参照距離
+                int nn = actN * 2;
+                //基準になる距離計算
+                double sx = rx - (int)rx;
+                double sy = ry - (int)ry;
+                double dx = (sx < 0.5) ? 0.5 - sx : 0.5 - sx + 1;
+                double dy = (sy < 0.5) ? 0.5 - sy : 0.5 - sy + 1;
+
+                //各ピクセルの重みと、重み合計を計算
+                double[] xw = new double[nn];
+                double[] yw = new double[nn];
+                double xSum = 0, ySum = 0;
+                for (int i = -actN; i < actN; i++)
+                {
+                    //距離に倍率を掛け算したのをLanczosで重み計算
+                    //double x = SincA(Math.Abs(dx + i) / (limitD / 2.0));//n=2より大きいとボケる
+                    //double x = SincA(Math.Abs(dx + i) / (inScale / 2.0));//ノイズ多め
+                    double x = SincA(Math.Abs(dx + i) / (actN / 2.0));
+                    //double x = SincA(Math.Abs(dx + i) / actN);//ボケる
+                    //double x = SincA.Abs(dx + i) / (n / 2));//ノイズ多め
+                    xSum += x;
+                    xw[i + actN] = x;
+                    //double y = SincA(Math.Abs(dy + i) / (limitD / 2.0));
+                    //double y = SincA(Math.Abs(dy + i) / (inScale / 2.0));
+                    double y = SincA(Math.Abs(dy + i) / (actN / 2.0));
+                    //double y = SincA(Math.Abs(dy + i) / actN);
+                    //double y = SincA(Math.Abs(dy + i) / (n / 2));
+                    ySum += y;
+                    yw[i + actN] = y;
+                }
+
+                //重み合計で割り算して修正、全体で100%(1.0)にする
+                for (int i = 0; i < nn; i++)
+                {
+                    xw[i] /= xSum;
+                    yw[i] /= ySum;
+                }
+
+                // x * y
+                double[,] ws = new double[nn, nn];
+                for (int y = 0; y < nn; y++)
+                {
+                    for (int x = 0; x < nn; x++)
+                    {
+                        ws[x, y] = xw[x] * yw[y];
+                    }
+                }
+                return ws;
+            }
+        }
+
+
+        private BitmapSource BitmapHeightX2(BitmapSource source)
+        {
+            //1ピクセルあたりのバイト数、Byte / Pixel
+            int pByte = (source.Format.BitsPerPixel + 7) / 8;
+
+            //元画像の画素値の配列作成
+            int motoWidth = source.PixelWidth;
+            int motoHeight = source.PixelHeight;
+            int motoStride = motoWidth * pByte;//1行あたりのbyte数
+            byte[] sourcePixels = new byte[motoHeight * motoStride];
+            source.CopyPixels(sourcePixels, motoStride, 0);
+
+            //変換後の画像の画素値の配列用
+            int height = motoHeight * 2;
+            byte[] pixels = new byte[height * motoStride];
+
+            for (int y = 0; y < motoHeight; y++)
+            {
+                for (int x = 0; x < motoWidth; x++)
+                {
+                    int pp = (y * motoStride) + (x * pByte);
+                    int pp2 = pp + (motoStride * y);
+                    pixels[pp2] = sourcePixels[pp];
+                    pixels[pp2 + 1] = sourcePixels[pp + 1];
+                    pixels[pp2 + 2] = sourcePixels[pp + 2];
+                    pixels[pp2 + 3] = sourcePixels[pp + 3];
+
+                    pp2 += motoStride;
+                    pixels[pp2] = sourcePixels[pp];
+                    pixels[pp2 + 1] = sourcePixels[pp + 1];
+                    pixels[pp2 + 2] = sourcePixels[pp + 2];
+                    pixels[pp2 + 3] = sourcePixels[pp + 3];
+                }
+            }
+
+            BitmapSource bitmap = BitmapSource.Create(motoWidth, height, 96, 96, source.Format, null, pixels, motoStride);
+            return bitmap;
+        }
+
+
+        private BitmapSource BitmapWidthX2(BitmapSource source)
+        {
+            //1ピクセルあたりのバイト数、Byte / Pixel
+            int pByte = (source.Format.BitsPerPixel + 7) / 8;
+
+            //元画像の画素値の配列作成
+            int motoWidth = source.PixelWidth;
+            int motoHeight = source.PixelHeight;
+            int motoStride = motoWidth * pByte;//1行あたりのbyte数
+            byte[] sourcePixels = new byte[motoHeight * motoStride];
+            source.CopyPixels(sourcePixels, motoStride, 0);
+
+            //変換後の画像の画素値の配列用
+            int sakiWidth = motoWidth * 2;
+            int sakiStride = motoStride * 2;
+            byte[] pixels = new byte[motoHeight * sakiStride];
+
+            for (int y = 0; y < motoHeight; y++)
+            {
+                for (int x = 0; x < motoWidth; x++)
+                {
+                    int pp = (y * motoStride) + (x * pByte);
+                    int pp2 = (y * sakiStride) + (x * 2 * pByte);
+                    pixels[pp2] = sourcePixels[pp];
+                    pixels[pp2 + 1] = sourcePixels[pp + 1];
+                    pixels[pp2 + 2] = sourcePixels[pp + 2];
+                    pixels[pp2 + 3] = sourcePixels[pp + 3];
+
+                    pixels[pp2 + 4] = sourcePixels[pp];
+                    pixels[pp2 + 5] = sourcePixels[pp + 1];
+                    pixels[pp2 + 6] = sourcePixels[pp + 2];
+                    pixels[pp2 + 7] = sourcePixels[pp + 3];
+                }
+            }
+            BitmapSource bitmap = BitmapSource.Create(sakiWidth, motoHeight, 96, 96, source.Format, null, pixels, sakiStride);
+            return bitmap;
+        }
+
+
+        private BitmapSource BitmapX2(BitmapSource source)
+        {
+            //1ピクセルあたりのバイト数、Byte / Pixel
+            int pByte = (source.Format.BitsPerPixel + 7) / 8;
+
+            //元画像の画素値の配列作成
+            int motoWidth = source.PixelWidth;
+            int motoHeight = source.PixelHeight;
+            int motoStride = motoWidth * pByte;//1行あたりのbyte数
+            byte[] sourcePixels = new byte[motoHeight * motoStride];
+            source.CopyPixels(sourcePixels, motoStride, 0);
+
+            //変換後の画像の画素値の配列用
+            int sakiWidth = motoWidth * 2;
+            int sakiHeight = motoHeight * 2;
+            int sakiStride = motoStride * 2;
+            byte[] pixels = new byte[sakiHeight * sakiStride];
+
+            for (int y = 0; y < motoHeight; y++)
+            {
+                for (int x = 0; x < motoWidth; x++)
+                {
+                    int pp = (y * motoStride) + (x * pByte);
+                    byte p0 = sourcePixels[pp];
+                    byte p1 = sourcePixels[pp + 1];
+                    byte p2 = sourcePixels[pp + 2];
+                    byte p3 = sourcePixels[pp + 3];
+
+                    int pp2 = (y * 2 * sakiStride) + (x * 2 * pByte);
+                    pixels[pp2] = p0;
+                    pixels[pp2 + 1] = p1;
+                    pixels[pp2 + 2] = p2;
+                    pixels[pp2 + 3] = p3;
+                    pixels[pp2 + 4] = p0;
+                    pixels[pp2 + 5] = p1;
+                    pixels[pp2 + 6] = p2;
+                    pixels[pp2 + 7] = p3;
+
+                    pp2 += sakiStride;
+                    pixels[pp2] = p0;
+                    pixels[pp2 + 1] = p1;
+                    pixels[pp2 + 2] = p2;
+                    pixels[pp2 + 3] = p3;
+                    pixels[pp2 + 4] = p0;
+                    pixels[pp2 + 5] = p1;
+                    pixels[pp2 + 6] = p2;
+                    pixels[pp2 + 7] = p3;
+
+                }
+            }
+            BitmapSource bitmap = BitmapSource.Create(sakiWidth, sakiHeight, 96, 96, source.Format, null, pixels, sakiStride);
+            return bitmap;
+        }
+
+
+
+        private BitmapSource BitmapCenter(BitmapSource source)
+        {
+            int w = source.PixelWidth;
+            int h = source.PixelHeight;
+            if (w == 640 && h == 480) return source;
+
+            int x = (640 - w) / 2;
+            int y = (480 - h) / 2;
+
+            DrawingVisual dv = new();
+            using (DrawingContext dc = dv.RenderOpen())
+            {
+                dc.DrawImage(source, new Rect(x, y, w, h));
+            }
+            var render = new RenderTargetBitmap(640, 480, 96, 96, PixelFormats.Pbgra32);
+            render.Render(dv);
+            return render;
+        }
+
+        /// <summary>
+        /// PS1のスクショ画像をドット保持して640x480にリサイズ
+        /// </summary>
+        /// <param name="source"></param>
+        /// <returns></returns>
+        private BitmapSource BitmapPS1(BitmapSource source)
+        {
+            BitmapSource bmp = source;
+            //240以下は縦2倍
+            if (bmp.PixelHeight <= 240) { bmp = BitmapHeightX2(bmp); }
+            //512未満は横2倍
+            if (bmp.PixelWidth < 512) bmp = BitmapWidthX2(bmp);
+            //中途半端な横サイズ画像はリサイズ
+            if (bmp.PixelWidth > 640 || bmp.PixelWidth < 624)
+            {
+                bmp = SincBgra32(bmp, 640, 480, 4);
+            }
+            //中央配置(640x480未満の場合)
+            bmp = BitmapCenter(bmp);
+            return bmp;
+        }
+
+
+        #endregion 特殊保存PS1スクショ用
 
 
         #region 画像縮小処理
@@ -2073,7 +2642,7 @@ namespace Gourenga
                 MyThumbs[ii].Focus();
             }
 
-        
+
 
         }
 
@@ -2192,10 +2761,20 @@ namespace Gourenga
                         h += (areaRows + 1) * MyData.Margin;
                     }
                     break;
+                case SaveScaleSizeType.Special:
+                    w = 640 * areaCols;
+                    h = 480 * areaRows;
+                    break;
                 default:
                     break;
             }
-            //string strH = h == 0 ? "可変" : h.ToString();
+            //余白分を追加
+            if (MyData.IsMargin)
+            {
+                int margin = MyData.Margin;
+                w += margin + (areaCols * margin);
+                h += margin + (areaRows * margin);
+            }
             return new Size(w, h);
             //MyStatusItemSaveImageSize.Content = $"保存サイズ(横{w}, 縦{strH})";
         }
@@ -2559,9 +3138,11 @@ namespace Gourenga
     public enum SaveScaleSizeType
     {
         //変更時はXAMLのほうでも変更する必要がある、radioButtonのところのConverterParameter
+
         OneWidth,//ひとつあたりの幅
         All,//全体
         TopLeft,//先頭画像横幅にあわせる
+        Special,//特殊640x480
     }
 
     #endregion 列挙型

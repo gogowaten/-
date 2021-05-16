@@ -67,8 +67,8 @@
           <TextBlock Text="text"/>
         </StackPanel>
       </Expander>-->
-      <Expander DockPanel.Dock="Top" Header="設定" IsExpanded="{Binding IsExpanded}" ExpandDirection="Down">
-        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
+      <Expander DockPanel.Dock="Left" Header="設定" IsExpanded="{Binding IsExpanded}" ExpandDirection="Right">
+        <StackPanel DockPanel.Dock="Top" Orientation="Vertical">
           <StackPanel Margin="10,10,5,10">
             <GroupBox Header="連結範囲">
               <StackPanel Orientation="Horizontal">
@@ -140,6 +140,13 @@
                     <RadioButton Content="左上画像の横幅を基準にする"
                            Click="RadioButtonSaveSize_Click"
                            IsChecked="{Binding Path=SaveScaleSizeType, Converter={StaticResource ConvSaveType}, ConverterParameter=TopLeft}"/>
+                  </StackPanel>
+                </Border>
+                <Border BorderThickness="1" BorderBrush="LightBlue">
+                  <StackPanel Orientation="Horizontal" Margin="10,0,0,0">
+                    <RadioButton Content="特殊"
+                           Click="RadioButtonSaveSize_Click"
+                           IsChecked="{Binding Path=SaveScaleSizeType, Converter={StaticResource ConvSaveType}, ConverterParameter=Special}"/>
                   </StackPanel>
                 </Border>
               </StackPanel>
