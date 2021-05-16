@@ -306,6 +306,7 @@ namespace Gourenga
 
         }
 
+
         private void Thumb_LostFocus(object sender, RoutedEventArgs e)
         {
             var t = sender as ImageThumb;
@@ -2027,27 +2028,29 @@ namespace Gourenga
             if (mod == 0)
             {
                 //左方向のキーなら何もしない
-                if (key == Key.NumPad1 || key == Key.NumPad4 || key == Key.NumPad7)
+                if (key is Key.NumPad1 or Key.NumPad4 or Key.NumPad7)
                     return;
             }
             //右端判定
             else if (mod == MyData.Col - 1)
             {
                 //右方向のキーなら何もしない
-                if (key == Key.NumPad3 || key == Key.NumPad6 || key == Key.NumPad9)
+                if (key is Key.NumPad3 or Key.NumPad6 or Key.NumPad9)
                     return;
             }
 
             //移動先のIndex決定
             int ii;
             if (key == Key.NumPad1) ii = i + MyData.Col - 1;
-            else if (key == Key.NumPad2) ii = i + MyData.Col;
+
+            else if (key is Key.NumPad2) ii = i + MyData.Col;
+            else if (key is Key.NumPad4) ii = i - 1;
+            else if (key is Key.NumPad6) ii = i + 1;
+            else if (key is Key.NumPad8) ii = i - MyData.Col;
+
             else if (key == Key.NumPad3) ii = i + MyData.Col + 1;
-            else if (key == Key.NumPad4) ii = i - 1;
             else if (key == Key.NumPad5) ii = i + MyData.Col;
-            else if (key == Key.NumPad6) ii = i + 1;
             else if (key == Key.NumPad7) ii = i - MyData.Col - 1;
-            else if (key == Key.NumPad8) ii = i - MyData.Col;
             else if (key == Key.NumPad9) ii = i - MyData.Col + 1;
             else return;
 
@@ -2059,18 +2062,23 @@ namespace Gourenga
             {
                 //入れ替え
                 MoveThumb(i, ii, MyActiveThumb);
-                MyThumbs[ii].Focus();
+                //MyThumbs[ii].Focus();
                 //indexに従って表示位置変更
                 SetLocate();
+
             }
             //ActiveThumbの変更
             else
             {
-                //MyActiveThumb = MyThumbs[ii];
                 MyThumbs[ii].Focus();
             }
 
+        
+
         }
+
+
+
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
         {
             switch (Keyboard.Modifiers)
@@ -2344,7 +2352,27 @@ namespace Gourenga
         private void Thumb_PreviewKeyDown(object sender, KeyEventArgs e)
         {
             MoveActiveThumb(e.Key, Keyboard.Modifiers == ModifierKeys.Control);
+
+            //MyCanvas.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(MyCanvas), 0, Key.Left) { RoutedEvent = Keyboard.KeyDownEvent });
+
+
+
+
+
+            ////var key = Key.Insert;                    // Key to send
+            //var target = Keyboard.FocusedElement;    // Target element
+            //var routedEvent = Keyboard.KeyDownEvent; // Event to send
+            //var ttt = sender as ImageThumb;
+
+            //target.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(ttt), 0, e.Key)
+
+            //{ RoutedEvent = routedEvent });
+
+
+
         }
+
+
 
         //設定を名前を付けて保存
         private void MyButtonSaveData_Click(object sender, RoutedEventArgs e)
