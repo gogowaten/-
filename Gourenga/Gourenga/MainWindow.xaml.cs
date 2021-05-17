@@ -1637,22 +1637,60 @@ namespace Gourenga
         /// </summary>
         /// <param name="source"></param>
         /// <returns></returns>
+        //private BitmapSource BitmapPS1(BitmapSource source)
+        //{
+        //    BitmapSource bmp = source;
+        //    //240以下は縦2倍
+        //    if (bmp.PixelHeight <= 240) { bmp = BitmapHeightX2(bmp); }
+        //    //512未満は横2倍
+        //    if (bmp.PixelWidth < 512) bmp = BitmapWidthX2(bmp);
+        //    //中途半端な横サイズ画像はリサイズ
+        //    if (bmp.PixelWidth > 640 || bmp.PixelWidth < 624)
+        //    {
+        //        bmp = SincBgra32(bmp, 640, 480, 4);
+        //    }
+        //    //中央配置(640x480未満の場合)
+        //    bmp = BitmapCenter(bmp);
+        //    return bmp;
+        //}
+
+        //jinで撮ったもの専用、左16ドットから320以外は左右を削る
         private BitmapSource BitmapPS1(BitmapSource source)
         {
             BitmapSource bmp = source;
-            //240以下は縦2倍
-            if (bmp.PixelHeight <= 240) { bmp = BitmapHeightX2(bmp); }
-            //512未満は横2倍
+            int w = bmp.PixelWidth;
+            int h = bmp.PixelHeight;
+            //368x480だけ特別
+            if (w == 368 && h == 480) bmp = Croped368x480(bmp);
+
+            if (bmp.PixelHeight <= 240)
+            {
+                bmp = BitmapHeightX2(bmp);
+            }
             if (bmp.PixelWidth < 512) bmp = BitmapWidthX2(bmp);
-            //中途半端な横サイズ画像はリサイズ
             if (bmp.PixelWidth > 640 || bmp.PixelWidth < 624)
             {
-                bmp = SincBgra32(bmp, 640, 480, 4);
+                //横588か584どちらがいいのかわからん、クロノ・クロスは588のほうが円に近いけど、計算自体は584のほうが正確な気がする
+                bmp = BicubicBgra32Ex(bmp, 588, bmp.PixelHeight, -0.5);
+                //bmp = BitmapX2(bmp);
+                //bmp = LanczosBgra32(bmp, 588, 480, 3);//ランチョス、これがいい
+                //bmp = LanczosBgra32(bmp, 584, 480, 3);//ランチョス、これがいい
+                //bmp = LanczosBgra32(bmp, 588, bmp.PixelHeight, 3);//ランチョス、これがいい
+                //bmp = LanczosBgra32(bmp, 584, bmp.PixelHeight, 3);//ランチョス、これがいい
+                //bmp = LanczosBgra32(bmp, 640, bmp.PixelHeight, 3);//ランチョス、これがいい
+                //bmp = LanczosBgra32(bmp, 640, 480, 3);//ランチョス、これがいい
+                //bmp = SincTypeGBgra32(bmp, 640, 480, 2);//シャープだけど輪郭、nは2より大きいとボケる
+                //bmp = SincBgra32(bmp, 640, 480, 4);//過剰なシャープ派手画質、
             }
-            //中央配置(640x480未満の場合)
             bmp = BitmapCenter(bmp);
             return bmp;
         }
+        private BitmapSource Croped368x480(BitmapSource source)
+        {
+            return new CroppedBitmap(source, new Int32Rect(16, 0, 320, 480));
+        }
+
+
 
 
         #endregion 特殊保存PS1スクショ用

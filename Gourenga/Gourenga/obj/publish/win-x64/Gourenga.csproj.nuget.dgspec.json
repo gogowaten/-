@@ -5,7 +5,7 @@
   },
   "projects": {
     "C:\\Users\\waten\\Source\\Repos\\gourenga\\Gourenga\\Gourenga\\Gourenga.csproj": {
-      "version": "1.8.0",
+      "version": "1.9.0",
       "restore": {
         "projectUniqueName": "C:\\Users\\waten\\Source\\Repos\\gourenga\\Gourenga\\Gourenga\\Gourenga.csproj",
         "projectName": "Gourenga",
@@ -60,7 +60,7 @@
               "privateAssets": "none"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\5.0.202\\RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\5.0.203\\RuntimeIdentifierGraph.json"
         }
       },
       "runtimes": {
